@@ -19,6 +19,7 @@ import org.eclipse.jdt.ls.core.internal.BuildWorkspaceStatus;
 import org.eclipse.jdt.ls.core.internal.codemanipulation.GenerateGetterSetterOperation.AccessorField;
 import org.eclipse.jdt.ls.core.internal.handlers.FileEventHandler.FileRenameParams;
 import org.eclipse.jdt.ls.core.internal.handlers.FindLinksHandler.FindLinksParams;
+import org.eclipse.jdt.ls.core.internal.handlers.FormatterHandler.StringFormattingParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateAccessorsHandler.GenerateAccessorsParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateConstructorsHandler.CheckConstructorsResponse;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateConstructorsHandler.GenerateConstructorsParams;
@@ -130,4 +131,7 @@ public interface JavaProtocolExtensions {
 
 	@JsonRequest
 	CompletableFuture<WorkspaceEdit> willRenameFiles(FileRenameParams params);
+
+	@JsonRequest
+	CompletableFuture<String> stringFormatting(StringFormattingParams params);
 }

@@ -74,6 +74,14 @@ public class FormatterHandler {
 		return format(params.getTextDocument().getUri(), params.getOptions(), params.getRange(), monitor);
 	}
 
+	public String stringFormatting(StringFormattingParams params, IProgressMonitor monitor) {
+		CodeFormatter formatter = ToolFactory.createCodeFormatter(getOptions(params.options, null));
+		String sourceToFormat = params.text;
+		int kind = CodeFormatter.K_COMPILATION_UNIT | CodeFormatter.F_INCLUDE_COMMENTS;
+		IRegion region = new Region(0, sourceToFormat.length());
+		return "format(params.getTextDocument().getUri(), params.getOptions(), (Range) null, monitor)";
+	}
+
 	private List<org.eclipse.lsp4j.TextEdit> format(String uri, FormattingOptions options, Range range, IProgressMonitor monitor) {
 		if (!preferenceManager.getPreferences().isJavaFormatEnabled()) {
 			return Collections.emptyList();
@@ -141,7 +149,7 @@ public class FormatterHandler {
 	}
 
 	public static Map<String, String> getOptions(FormattingOptions options, ICompilationUnit cu) {
-		Map<String, String> eclipseOptions = cu.getJavaProject().getOptions(true);
+		Map<String, String> eclipseOptions = (cu == null) ? JavaCore.getOptions() : cu.getJavaProject().getOptions(true);
 
 		Map<String, String> customOptions = options.entrySet().stream().filter(map -> chekIfValueIsNotNull(map.getValue())).collect(toMap(e -> e.getKey(), e -> getOptionValue(e.getValue())));
 
@@ -309,6 +317,11 @@ public class FormatterHandler {
 			JavaLanguageServerPlugin.logException(e.getMessage(), e);
 		}
 		return null;
+	}
+
+	public static class StringFormattingParams {
+		public String text;
+		public FormattingOptions options;
 	}
 
 }

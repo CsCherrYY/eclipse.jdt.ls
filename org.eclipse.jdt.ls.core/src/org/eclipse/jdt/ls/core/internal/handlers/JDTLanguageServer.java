@@ -49,6 +49,7 @@ import org.eclipse.jdt.ls.core.internal.ServiceStatus;
 import org.eclipse.jdt.ls.core.internal.codemanipulation.GenerateGetterSetterOperation.AccessorField;
 import org.eclipse.jdt.ls.core.internal.handlers.FileEventHandler.FileRenameParams;
 import org.eclipse.jdt.ls.core.internal.handlers.FindLinksHandler.FindLinksParams;
+import org.eclipse.jdt.ls.core.internal.handlers.FormatterHandler.StringFormattingParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateAccessorsHandler.GenerateAccessorsParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateConstructorsHandler.CheckConstructorsResponse;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateConstructorsHandler.GenerateConstructorsParams;
@@ -695,6 +696,13 @@ public class JDTLanguageServer extends BaseJDTLanguageServer implements Language
 		logInfo(">> document/onTypeFormatting");
 		FormatterHandler handler = new FormatterHandler(preferenceManager);
 		return computeAsync((monitor) -> handler.onTypeFormatting(params, monitor));
+	}
+
+	@Override
+	public CompletableFuture<String> stringFormatting(StringFormattingParams params) {
+		logInfo(">> java/stringFormatting");
+		FormatterHandler handler = new FormatterHandler(preferenceManager);
+		return computeAsync((monitor) -> handler.stringFormatting(params, monitor));
 	}
 
 	/* (non-Javadoc)
