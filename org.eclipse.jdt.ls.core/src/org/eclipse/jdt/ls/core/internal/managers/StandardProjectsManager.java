@@ -224,21 +224,17 @@ public class StandardProjectsManager extends ProjectsManager {
 				if (url != null) {
 					URI formatterUri = url.toURI();
 					URI uri = JDTUtils.toURI(uriString);
-					File file1 = new File(url.getFile());
-					File file2 = new File(getUrl(uriString).getFile());
-					boolean b1 = file1.exists();
-					boolean b2 = file2.exists();
-					String test5 = file1.getCanonicalPath();
-					String test6 = file2.getCanonicalPath();
-					if (uri != null && uri.equals(formatterUri) && JavaLanguageServerPlugin.getInstance().getProtocol() != null) {
+					File fileEvent = new File(uri.getPath());
+					File fileFormatter = new File(formatterUri.getPath());
+					if (fileEvent.compareTo(fileFormatter) == 0 && JavaLanguageServerPlugin.getInstance().getProtocol() != null) {
 						if (changeType == CHANGE_TYPE.DELETED || changeType == CHANGE_TYPE.CREATED) {
 							registerWatchers();
 						}
 						FormatterManager.configureFormatter(preferenceManager, this);
 					}
 				}
-			} catch (Exception e) {
-				String a = "1";
+			} catch (URISyntaxException e) {
+
 			}
 		}
 
