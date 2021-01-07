@@ -7,17 +7,17 @@
             "mainClass": "org.eclipse.equinox.launcher.Main",
             "projectName": "org.eclipse.jdt.ls.core",
             "classPaths": [
-                "C:\\Users\\chenshi\\AppData\\Roaming\\Code\\User\\workspaceStorage\\3832a80371467f46b7b1aea82a867889\\redhat.java\\jdt_ws\\.metadata\\.plugins\\org.eclipse.pde.core\\.bundle_pool\\plugins\\org.eclipse.equinox.launcher_1.6.0.v20200915-1508.jar"
+                "C:\\Users\\chenshi\\AppData\\Roaming\\Code\\User\\workspaceStorage\\ed95b1a397a80b292f713117fd0b243d\\redhat.java\\jdt_ws\\.metadata\\.plugins\\org.eclipse.pde.core\\.bundle_pool\\plugins\\org.eclipse.equinox.launcher_1.6.0.v20200915-1508.jar"
             ],
             "args": [
                 "-application",
                 "org.eclipse.jdt.ls.core.id1",
                 "-data",
-                "C:\\Users\\chenshi\\AppData\\Roaming\\Code\\User\\workspaceStorage\\3832a80371467f46b7b1aea82a867889\\redhat.java\\jdt_ws/../runtime-JDT-LS",
+                "C:\\Users\\chenshi\\AppData\\Roaming\\Code\\User\\workspaceStorage\\ed95b1a397a80b292f713117fd0b243d\\redhat.java\\jdt_ws/../runtime-JDT-LS",
                 "-configuration",
-                "file:C:/Users/chenshi/AppData/Roaming/Code/User/workspaceStorage/3832a80371467f46b7b1aea82a867889/redhat.java/jdt_ws/.metadata/.plugins/org.eclipse.pde.core/jdt.ls.remote.server/",
+                "file:C:/Users/chenshi/AppData/Roaming/Code/User/workspaceStorage/ed95b1a397a80b292f713117fd0b243d/redhat.java/jdt_ws/.metadata/.plugins/org.eclipse.pde.core/jdt.ls.remote.server/",
                 "-dev",
-                "file:C:/Users/chenshi/AppData/Roaming/Code/User/workspaceStorage/3832a80371467f46b7b1aea82a867889/redhat.java/jdt_ws/.metadata/.plugins/org.eclipse.pde.core/jdt.ls.remote.server/dev.properties",
+                "file:C:/Users/chenshi/AppData/Roaming/Code/User/workspaceStorage/ed95b1a397a80b292f713117fd0b243d/redhat.java/jdt_ws/.metadata/.plugins/org.eclipse.pde.core/jdt.ls.remote.server/dev.properties",
                 "-os",
                 "win32",
                 "-ws",

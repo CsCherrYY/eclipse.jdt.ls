@@ -29,6 +29,7 @@ import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.NodeFinder;
 import org.eclipse.jdt.core.formatter.CodeFormatter;
+import org.eclipse.jdt.core.formatter.CodeFormatterApplication;
 import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 import org.eclipse.jdt.core.manipulation.CoreASTProvider;
 import org.eclipse.jdt.internal.compiler.env.IModule;
@@ -37,6 +38,7 @@ import org.eclipse.jdt.ls.core.internal.JDTUtils;
 import org.eclipse.jdt.ls.core.internal.JavaLanguageServerPlugin;
 import org.eclipse.jdt.ls.core.internal.preferences.PreferenceManager;
 import org.eclipse.jface.text.BadLocationException;
+import org.eclipse.jface.text.Document;
 import org.eclipse.jface.text.IDocument;
 import org.eclipse.jface.text.IRegion;
 import org.eclipse.jface.text.Region;
@@ -48,6 +50,7 @@ import org.eclipse.lsp4j.FormattingOptions;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.jsonrpc.messages.Either3;
+import org.eclipse.text.edits.MalformedTreeException;
 import org.eclipse.text.edits.MultiTextEdit;
 import org.eclipse.text.edits.ReplaceEdit;
 import org.eclipse.text.edits.TextEdit;
@@ -75,10 +78,19 @@ public class FormatterHandler {
 	}
 
 	public String stringFormatting(StringFormattingParams params, IProgressMonitor monitor) {
+		IDocument doc = new Document();
+		doc.set(params.text);
 		CodeFormatter formatter = ToolFactory.createCodeFormatter(getOptions(params.options, null));
-		String sourceToFormat = params.text;
 		int kind = CodeFormatter.K_COMPILATION_UNIT | CodeFormatter.F_INCLUDE_COMMENTS;
-		IRegion region = new Region(0, sourceToFormat.length());
+		TextEdit edit = formatter.format(kind, params.text, 0, params.text.length(), 0, null);
+		if (edit != null) {
+			try {
+				edit.apply(doc);
+			} catch (Exception e) {
+
+			}
+
+		}
 		return "format(params.getTextDocument().getUri(), params.getOptions(), (Range) null, monitor)";
 	}
 
