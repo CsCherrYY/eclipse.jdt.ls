@@ -91,7 +91,7 @@ public class FormatterHandler {
 			}
 
 		}
-		return "format(params.getTextDocument().getUri(), params.getOptions(), (Range) null, monitor)";
+		return doc.get();
 	}
 
 	private List<org.eclipse.lsp4j.TextEdit> format(String uri, FormattingOptions options, Range range, IProgressMonitor monitor) {
