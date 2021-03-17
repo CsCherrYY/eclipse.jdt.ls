@@ -22,15 +22,15 @@ import org.eclipse.jdt.ls.core.internal.commands.DiagnosticsCommand;
 import org.eclipse.jdt.ls.core.internal.commands.OrganizeImportsCommand;
 import org.eclipse.jdt.ls.core.internal.commands.ProjectCommand;
 import org.eclipse.jdt.ls.core.internal.commands.ProjectCommand.ClasspathOptions;
+import org.eclipse.jdt.ls.core.internal.commands.lspproposal.LSPTypeHierarchyItem;
+import org.eclipse.jdt.ls.core.internal.commands.lspproposal.ResolveLSPTypeHierarchyItemParams;
 import org.eclipse.jdt.ls.core.internal.handlers.ResolveSourceMappingHandler;
 import org.eclipse.jdt.ls.core.internal.commands.SemanticTokensCommand;
 import org.eclipse.jdt.ls.core.internal.commands.SourceAttachmentCommand;
 import org.eclipse.jdt.ls.core.internal.commands.TypeHierarchyCommand;
 import org.eclipse.jdt.ls.core.internal.semantictokens.SemanticTokensLegend;
-import org.eclipse.lsp4j.ResolveTypeHierarchyItemParams;
 import org.eclipse.lsp4j.TextDocumentPositionParams;
 import org.eclipse.lsp4j.TypeHierarchyDirection;
-import org.eclipse.lsp4j.TypeHierarchyItem;
 import org.eclipse.lsp4j.TypeHierarchyParams;
 import org.eclipse.lsp4j.WorkspaceEdit;
 
@@ -94,15 +94,15 @@ public class JDTDelegateCommandHandler implements IDelegateCommandHandler {
 					return ResolveSourceMappingHandler.resolveStackTraceLocation((String) arguments.get(0), projectNames);
 				case "java.navigate.resolveTypeHierarchy":
 					TypeHierarchyCommand resolveTypeHierarchyCommand = new TypeHierarchyCommand();
-					TypeHierarchyItem toResolve = JSONUtility.toModel(arguments.get(0), TypeHierarchyItem.class);
+					LSPTypeHierarchyItem toResolve = JSONUtility.toModel(arguments.get(0), LSPTypeHierarchyItem.class);
 					TypeHierarchyDirection resolveDirection = TypeHierarchyDirection.forValue(JSONUtility.toModel(arguments.get(1), Integer.class));
 					int resolveDepth = JSONUtility.toModel(arguments.get(2), Integer.class);
-					ResolveTypeHierarchyItemParams resolveParams = new ResolveTypeHierarchyItemParams();
+					ResolveLSPTypeHierarchyItemParams resolveParams = new ResolveLSPTypeHierarchyItemParams();
 					resolveParams.setItem(toResolve);
 					resolveParams.setDirection(resolveDirection);
 					resolveParams.setResolve(resolveDepth);
-					TypeHierarchyItem resolvedItem = resolveTypeHierarchyCommand.resolveTypeHierarchy(resolveParams, monitor);
-					return resolvedItem;
+					LSPTypeHierarchyItem[] resolvedItems = resolveTypeHierarchyCommand.resolveTypeHierarchy(resolveParams, monitor);
+					return resolvedItems;
 				case "java.navigate.openTypeHierarchy":
 					TypeHierarchyCommand typeHierarchyCommand = new TypeHierarchyCommand();
 					TypeHierarchyParams params = new TypeHierarchyParams();
@@ -113,7 +113,7 @@ public class JDTDelegateCommandHandler implements IDelegateCommandHandler {
 					params.setDirection(direction);
 					params.setTextDocument(textParams.getTextDocument());
 					params.setPosition(textParams.getPosition());
-					TypeHierarchyItem typeHierarchyItem = typeHierarchyCommand.typeHierarchy(params, monitor);
+					LSPTypeHierarchyItem typeHierarchyItem = typeHierarchyCommand.typeHierarchy(params, monitor);
 					return typeHierarchyItem;
 				default:
 					break;
