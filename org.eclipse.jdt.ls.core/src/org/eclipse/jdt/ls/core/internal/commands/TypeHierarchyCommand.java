@@ -43,6 +43,18 @@ import org.eclipse.lsp4j.TypeHierarchyParams;
 
 public class TypeHierarchyCommand {
 
+	private ITypeHierarchy typeHierarchy;
+
+	private static TypeHierarchyCommand typeHierarchyCommand;
+
+	public static TypeHierarchyCommand getInstance() {
+		return TypeHierarchyCommand.typeHierarchyCommand;
+	}
+
+	public static void refreshView() {
+		TypeHierarchyCommand.typeHierarchyCommand = new TypeHierarchyCommand();
+	}
+
 	public TypeHierarchyItem typeHierarchy(TypeHierarchyParams params, IProgressMonitor monitor) {
 		if (params == null) {
 			return null;
@@ -176,10 +188,12 @@ public class TypeHierarchyCommand {
 		if (monitor.isCanceled() || resolve <= 0) {
 			return;
 		}
-		ITypeHierarchy typeHierarchy = (direction == TypeHierarchyDirection.Parents) ? type.newSupertypeHierarchy(DefaultWorkingCopyOwner.PRIMARY, monitor) : type.newTypeHierarchy(type.getJavaProject(), DefaultWorkingCopyOwner.PRIMARY, monitor);
+		//if (this.typeHierarchy == null) {
+			this.typeHierarchy = type.newTypeHierarchy(type.getJavaProject(), DefaultWorkingCopyOwner.PRIMARY, monitor);
+		//}
 		if (direction == TypeHierarchyDirection.Children || direction == TypeHierarchyDirection.Both) {
 			List<TypeHierarchyItem> childrenItems = new ArrayList<TypeHierarchyItem>();
-			IType[] children = typeHierarchy.getSubtypes(type);
+			IType[] children = this.typeHierarchy.getSubtypes(type);
 			for (IType childType : children) {
 				TypeHierarchyItem childItem = TypeHierarchyCommand.toTypeHierarchyItem(childType);
 				if (childItem == null) {
@@ -192,7 +206,7 @@ public class TypeHierarchyCommand {
 		}
 		if (direction == TypeHierarchyDirection.Parents || direction == TypeHierarchyDirection.Both) {
 			List<TypeHierarchyItem> parentsItems = new ArrayList<TypeHierarchyItem>();
-			IType[] parents = typeHierarchy.getSupertypes(type);
+			IType[] parents = this.typeHierarchy.getSupertypes(type);
 			for (IType parentType : parents) {
 				TypeHierarchyItem parentItem = TypeHierarchyCommand.toTypeHierarchyItem(parentType);
 				if (parentItem == null) {
