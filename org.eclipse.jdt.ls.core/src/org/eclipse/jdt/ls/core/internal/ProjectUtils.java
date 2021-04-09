@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016-2019 Red Hat Inc. and others.
+ * Copyright (c) 2016-2020 Red Hat Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -139,6 +140,10 @@ public final class ProjectUtils {
 
 	public static IJavaProject getJavaProject(String projectName) {
 		IProject project = getProject(projectName);
+		return getJavaProject(project);
+	}
+
+	public static IJavaProject getJavaProject(IProject project) {
 		if (project != null && isJavaProject(project)) {
 			return JavaCore.create(project);
 		}
@@ -168,7 +173,7 @@ public final class ProjectUtils {
 
 		if (!parentSrcPaths.isEmpty()) {
 			throw new CoreException(new Status(IStatus.ERROR, IConstants.PLUGIN_ID, Messages
-					.format("Cannot add the folder ''{0}'' to the source path because it''s parent folder is already in the source path of the project ''{1}''.", new String[] { sourcePath.toOSString(), project.getProject().getName() })));
+					.format("Cannot add the folder ''{0}'' to the source path because its parent folder is already in the source path of the project ''{1}''.", new String[] { sourcePath.toOSString(), project.getProject().getName() })));
 		}
 
 		if (exclusionPaths != null) {
@@ -219,6 +224,22 @@ public final class ProjectUtils {
 		}
 
 		return result.toArray(new IPath[0]);
+	}
+
+	public static IPath[] listReferencedLibraries(IJavaProject project) throws JavaModelException {
+		List<IPath> libraries = new LinkedList<>();
+		for (IClasspathEntry entry : project.getRawClasspath()) {
+			if (entry.getEntryKind() == IClasspathEntry.CPE_LIBRARY) {
+				IClasspathEntry resolvedEntry = JavaCore.getResolvedClasspathEntry(entry);
+				if (resolvedEntry == null) {
+					continue;
+				}
+
+				libraries.add(resolvedEntry.getPath());
+			}
+		}
+
+		return libraries.toArray(IPath[]::new);
 	}
 
 	public static boolean isOnSourcePath(IPath sourcePath, IJavaProject project) throws JavaModelException {

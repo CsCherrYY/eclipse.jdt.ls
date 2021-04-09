@@ -29,9 +29,11 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
+import org.codehaus.plexus.util.StringUtils;
+import org.eclipse.buildship.core.internal.CorePlugin;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IProject;
@@ -60,6 +64,7 @@ import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.WorkingCopyOwner;
+import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 import org.eclipse.jdt.ls.core.internal.DocumentAdapter;
 import org.eclipse.jdt.ls.core.internal.JDTUtils;
 import org.eclipse.jdt.ls.core.internal.JavaClientConnection.JavaLanguageClient;
@@ -127,9 +132,7 @@ public abstract class AbstractProjectsManagerBasedTest {
 		logListener = new SimpleLogListener();
 		Platform.addLogListener(logListener);
 		preferences = new Preferences();
-		preferences.setRootPaths(Collections.singleton(new Path(getWorkingProjectDirectory().getAbsolutePath())));
-		preferences.setCodeGenerationTemplateGenerateComments(true);
-		preferences.setMavenDownloadSources(true);
+		initPreferences(preferences);
 		if (preferenceManager == null) {
 			preferenceManager = mock(StandardPreferenceManager.class);
 		}
@@ -155,14 +158,23 @@ public abstract class AbstractProjectsManagerBasedTest {
 		});
 	}
 
+	protected void initPreferences(Preferences preferences) throws IOException {
+		preferences.setRootPaths(Collections.singleton(new Path(getWorkingProjectDirectory().getAbsolutePath())));
+		preferences.setCodeGenerationTemplateGenerateComments(true);
+		preferences.setMavenDownloadSources(true);
+	}
+
 	protected ClientPreferences initPreferenceManager(boolean supportClassFileContents) {
 		StandardPreferenceManager.initialize();
+		Hashtable<String, String> javaCoreOptions = JavaCore.getOptions();
+		javaCoreOptions.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, JavaCore.TAB);
+		javaCoreOptions.put(DefaultCodeFormatterConstants.FORMATTER_TAB_SIZE, "4");
+		JavaCore.setOptions(javaCoreOptions);
 		when(preferenceManager.getPreferences()).thenReturn(preferences);
 		when(preferenceManager.getPreferences(any())).thenReturn(preferences);
 		when(preferenceManager.isClientSupportsClassFileContent()).thenReturn(supportClassFileContents);
 		ClientPreferences clientPreferences = mock(ClientPreferences.class);
 		when(clientPreferences.isProgressReportSupported()).thenReturn(true);
-		when(clientPreferences.isSemanticHighlightingSupported()).thenReturn(true);
 		when(preferenceManager.getClientPreferences()).thenReturn(clientPreferences);
 		when(clientPreferences.isSupportedCodeActionKind(anyString())).thenReturn(true);
 		when(clientPreferences.isOverrideMethodsPromptSupported()).thenReturn(true);
@@ -234,6 +246,7 @@ public abstract class AbstractProjectsManagerBasedTest {
 
 	protected void waitForBackgroundJobs() throws Exception {
 		JobHelpers.waitForJobsToComplete(monitor);
+		Job.getJobManager().join(CorePlugin.GRADLE_JOB_FAMILY, new NullProgressMonitor());
 	}
 
 	protected File getSourceProjectDirectory() {
@@ -253,9 +266,14 @@ public abstract class AbstractProjectsManagerBasedTest {
 		Platform.removeLogListener(logListener);
 		logListener = null;
 		WorkspaceHelper.deleteAllProjects();
-		FileUtils.forceDelete(getWorkingProjectDirectory());
+		try {
+			// https://github.com/eclipse/eclipse.jdt.ls/issues/996
+			FileUtils.forceDelete(getWorkingProjectDirectory());
+		} catch (IOException e) {
+			getWorkingProjectDirectory().deleteOnExit();
+		}
 		Job.getJobManager().setProgressProvider(null);
-		JobHelpers.waitForJobsToComplete();
+		waitForBackgroundJobs();
 	}
 
 	protected void assertIsJavaProject(IProject project) {
@@ -390,5 +408,34 @@ public abstract class AbstractProjectsManagerBasedTest {
 		public void setChanged(boolean changed) {
 			this.changed = changed;
 		}
+	}
+
+	protected IProject copyAndImportFolder(String folder, String triggerFile) throws Exception {
+		File projectFolder = copyFiles(folder, true);
+		return importRootFolder(projectFolder, triggerFile);
+	}
+
+	protected IProject importRootFolder(File projectFolder, String triggerFile) throws Exception {
+		IPath rootPath = Path.fromOSString(projectFolder.getAbsolutePath());
+		return importRootFolder(rootPath, triggerFile);
+	}
+
+	protected IProject importRootFolder(IPath rootPath, String triggerFile) throws Exception {
+		if (StringUtils.isNotBlank(triggerFile)) {
+			IPath triggerFilePath = rootPath.append(triggerFile);
+			Preferences preferences = preferenceManager.getPreferences();
+			preferences.setTriggerFiles(Arrays.asList(triggerFilePath));
+		}
+		final List<IPath> roots = Arrays.asList(rootPath);
+		IWorkspaceRunnable runnable = new IWorkspaceRunnable() {
+			@Override
+			public void run(IProgressMonitor monitor) throws CoreException {
+				projectsManager.initializeProjects(roots, monitor);
+			}
+		};
+		JavaCore.run(runnable, null, monitor);
+		waitForBackgroundJobs();
+		String invisibleProjectName = ProjectUtils.getWorkspaceInvisibleProjectName(rootPath);
+		return ResourcesPlugin.getWorkspace().getRoot().getProject(invisibleProjectName);
 	}
 }

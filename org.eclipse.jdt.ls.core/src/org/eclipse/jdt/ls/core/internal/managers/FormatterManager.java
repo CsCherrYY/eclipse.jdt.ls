@@ -17,7 +17,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
@@ -30,9 +30,11 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.internal.formatter.DefaultCodeFormatterOptions;
+import org.eclipse.jdt.internal.ui.preferences.formatter.ProfileVersionerCore;
 import org.eclipse.jdt.ls.core.internal.IConstants;
 import org.eclipse.jdt.ls.core.internal.JavaLanguageServerPlugin;
 import org.eclipse.jdt.ls.core.internal.preferences.PreferenceManager;
+import org.eclipse.jdt.ls.core.internal.preferences.Preferences;
 import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
@@ -62,6 +64,7 @@ public class FormatterManager {
 		private String fName;
 		private Map<String, String> fSettings;
 		private String fKind;
+		private int fVersion;
 		private boolean reading = false;
 
 		/**
@@ -90,6 +93,12 @@ public class FormatterManager {
 						fKind = CODE_FORMATTER_PROFILE_KIND;
 					}
 					fSettings = new HashMap<>(200);
+					try {
+						fVersion = Integer.parseInt(attributes.getValue(XML_ATTRIBUTE_VERSION));
+					} catch (NumberFormatException e) {
+						fVersion = ProfileVersionerCore.getCurrentVersion();
+					}
+
 				}
 			}
 			else if (qName.equals(XML_NODE_ROOT)) {
@@ -110,6 +119,10 @@ public class FormatterManager {
 			return fSettings;
 		}
 
+		public int getVersion() {
+			return fVersion;
+		}
+
 	}
 
 	/**
@@ -123,6 +136,7 @@ public class FormatterManager {
 	private final static String XML_ATTRIBUTE_NAME= "name"; //$NON-NLS-1$
 	private final static String XML_ATTRIBUTE_PROFILE_KIND= "kind"; //$NON-NLS-1$
 	private final static String XML_ATTRIBUTE_VALUE= "value"; //$NON-NLS-1$
+	private final static String XML_ATTRIBUTE_VERSION= "version"; //$NON-NLS-1$
 
 	public FormatterManager() {
 	}
@@ -160,46 +174,47 @@ public class FormatterManager {
 		} catch (Exception e) {
 			throw new CoreException(new Status(IStatus.WARNING, IConstants.PLUGIN_ID, e.getMessage(), e));
 		}
-		return handler.getSettings();
+		int version = handler.getVersion();
+		if (version == ProfileVersionerCore.getCurrentVersion()) {
+			return handler.getSettings();
+		}
+		return ProfileVersionerCore.updateAndComplete(handler.getSettings(), version);
 	}
 
-	public static void configureFormatter(PreferenceManager preferenceManager, ProjectsManager projectsManager) {
-		String formatterUrl = preferenceManager.getPreferences().getFormatterUrl();
+	public static void configureFormatter(Preferences preferences) {
+		URI formatterUri = preferences.getFormatterAsURI();
 		Map<String, String> options = null;
-		if (formatterUrl != null) {
-			URL url = projectsManager.getUrl(formatterUrl);
-			if (url != null) {
-				try (InputStream inputStream = url.openStream()) {
-					InputSource inputSource = new InputSource(inputStream);
-					String profileName = preferenceManager.getPreferences().getFormatterProfileName();
-					options = FormatterManager.readSettingsFromStream(inputSource, profileName);
-				} catch (Exception e) {
-					JavaLanguageServerPlugin.logException(e.getMessage(), e);
-				}
-			} else {
-				JavaLanguageServerPlugin.logInfo("Invalid formatter:" + formatterUrl);
+		if (formatterUri != null) {
+			try (InputStream inputStream = formatterUri.toURL().openStream()) {
+				InputSource inputSource = new InputSource(inputStream);
+				String profileName = preferences.getFormatterProfileName();
+				options = FormatterManager.readSettingsFromStream(inputSource, profileName);
+			} catch (Exception e) {
+				JavaLanguageServerPlugin.logException(e.getMessage(), e);
 			}
 		}
 		if (options != null && !options.isEmpty()) {
-			setFormattingOptions(options);
+			setFormattingOptions(preferences, options);
 		} else {
 			Map<String, String> defaultOptions = DefaultCodeFormatterOptions.getEclipseDefaultSettings().getMap();
+			PreferenceManager.initializeJavaCoreOptions();
 			Hashtable<String, String> javaOptions = JavaCore.getOptions();
 			defaultOptions.forEach((k, v) -> {
 				javaOptions.put(k, v);
 			});
+			preferences.updateTabSizeInsertSpaces(javaOptions);
 			JavaCore.setOptions(javaOptions);
-			JavaLanguageServerPlugin.getPreferencesManager().initializeJavaCoreOptions();
 		}
 	}
 
-	private static void setFormattingOptions(Map<String, String> options) {
+	private static void setFormattingOptions(Preferences preferences, Map<String, String> options) {
 		Map<String, String> defaultOptions = DefaultCodeFormatterOptions.getEclipseDefaultSettings().getMap();
 		defaultOptions.putAll(options);
 		Hashtable<String, String> javaOptions = JavaCore.getOptions();
 		defaultOptions.entrySet().stream().filter(p -> p.getKey().startsWith(FORMATTER_OPTION_PREFIX)).forEach(p -> {
 			javaOptions.put(p.getKey(), p.getValue());
 		});
+		preferences.updateTabSizeInsertSpaces(javaOptions);
 		JavaCore.setOptions(javaOptions);
 	}
 

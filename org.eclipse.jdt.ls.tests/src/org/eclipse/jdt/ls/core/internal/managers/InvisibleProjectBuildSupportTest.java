@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2019 Red Hat Inc. and others.
+ * Copyright (c) 2019-2021 Red Hat Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -12,11 +12,14 @@
  *******************************************************************************/
 package org.eclipse.jdt.ls.core.internal.managers;
 
+import static org.eclipse.jdt.ls.core.internal.JsonMessageHelper.getParams;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -39,13 +42,18 @@ import org.eclipse.jdt.core.IClasspathEntry;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.ls.core.internal.ClassFileUtil;
+import org.eclipse.jdt.ls.core.internal.DependencyUtil;
 import org.eclipse.jdt.ls.core.internal.JavaProjectHelper;
+import org.eclipse.jdt.ls.core.internal.JobHelpers;
 import org.eclipse.jdt.ls.core.internal.ProjectUtils;
 import org.eclipse.jdt.ls.core.internal.ResourceUtils;
+import org.eclipse.jdt.ls.core.internal.handlers.HoverHandler;
+import org.eclipse.jdt.ls.core.internal.handlers.HoverHandlerTest;
 import org.eclipse.jdt.ls.core.internal.handlers.NavigateToDefinitionHandler;
 import org.eclipse.jdt.ls.core.internal.managers.ProjectsManager.CHANGE_TYPE;
 import org.eclipse.jdt.ls.core.internal.preferences.Preferences;
 import org.eclipse.jdt.ls.core.internal.preferences.Preferences.ReferencedLibraries;
+import org.eclipse.lsp4j.Hover;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
@@ -368,7 +376,7 @@ public class InvisibleProjectBuildSupportTest extends AbstractInvisibleProjectBa
 
 		{ // Test import of referenced libraries object with include and sources
 			List<String> include = Arrays.asList("libraries/**/*.jar");
-			Map<String, String> sources = new HashMap<String, String>() {{
+			Map<String, String> sources = new HashMap<>() {{
 				put("libraries/foo.jar", "libraries/foo-src.jar");
 			}};
 			Map<String, Object> configuration = new HashMap<>();
@@ -384,7 +392,7 @@ public class InvisibleProjectBuildSupportTest extends AbstractInvisibleProjectBa
 		{ // Test import of referenced libraries object with include, exclude and sources
 			List<String> include = Arrays.asList("libraries/**/*.jar");
 			List<String> exclude = Arrays.asList("libraries/sources/**");
-			Map<String, String> sources = new HashMap<String, String>() {{
+			Map<String, String> sources = new HashMap<>() {{
 				put("libraries/foo.jar", "libraries/foo-src.jar");
 			}};
 			Map<String, Object> configuration = new HashMap<>();
@@ -400,7 +408,7 @@ public class InvisibleProjectBuildSupportTest extends AbstractInvisibleProjectBa
 
 		{ // Test import of referenced libraries with exclude and sources
 			List<String> exclude = Arrays.asList("libraries/sources/**");
-			Map<String, String> sources = new HashMap<String, String>() {{
+			Map<String, String> sources = new HashMap<>() {{
 				put("libraries/foo.jar", "libraries/foo-src.jar");
 			}};
 			Map<String, Object> configuration = new HashMap<>();
@@ -425,7 +433,7 @@ public class InvisibleProjectBuildSupportTest extends AbstractInvisibleProjectBa
 		}
 
 		{ // Test import of referenced libraries with only sources
-			Map<String, String> sources = new HashMap<String, String>() {{
+			Map<String, String> sources = new HashMap<>() {{
 				put("libraries/foo.jar", "libraries/foo-src.jar");
 			}};
 			Map<String, Object> configuration = new HashMap<>();
@@ -462,5 +470,43 @@ public class InvisibleProjectBuildSupportTest extends AbstractInvisibleProjectBa
 
 		definitions = handler.definition(new TextDocumentPositionParams(identifier, new Position(0, 13)), monitor);
 		assertEquals(1, definitions.size());
+	}
+
+	@Test
+	public void testDynamicSourceLookups() throws Exception {
+		IProject project = copyAndImportFolder("singlefile/downloadSources", "UsingRemark.java");
+
+		File remarkFile = DependencyUtil.getArtifact("com.kotcrab.remark", "remark", "1.2.0", null);
+		IPath projectRealPath = ProjectUtils.getProjectRealFolder(project);
+		IPath remarkCopy = projectRealPath.append("lib/remark.jar");
+		FileUtils.copyFile(remarkFile, remarkCopy.toFile());
+
+		List<String> include = Arrays.asList("lib/**/*.jar");
+		ReferencedLibraries libraries = new ReferencedLibraries(new HashSet<>(include));
+		UpdateClasspathJob.getInstance().updateClasspath(JavaCore.create(project), libraries);
+		waitForBackgroundJobs();
+
+		List<IMarker> errors = ResourceUtils.getErrorMarkers(project);
+		assertEquals("Unexpected errors " + ResourceUtils.toString(errors), 0, errors.size());
+
+		IJavaProject javaProject = JavaCore.create(project);
+		IClasspathEntry remark = JavaProjectHelper.findJarEntry(javaProject, "remark.jar");
+		assertNotNull(remark);
+		assertNull(remark.getSourceAttachmentPath());
+
+		URI standalone = new File(projectRealPath.toFile(), "UsingRemark.java").toURI();
+		String payload = HoverHandlerTest.createHoverRequest(standalone, 2, 3);
+		TextDocumentPositionParams position = getParams(payload);
+
+		HoverHandler handler = new HoverHandler(preferenceManager);
+		Hover hover = handler.hover(position, monitor);
+		if (hover.getContents().getLeft().size() < 2) {
+			JobHelpers.waitForDownloadSourcesJobs(60000);
+			hover = handler.hover(position, monitor);
+		}
+
+		assertNotNull(hover);
+		String javadoc = hover.getContents().getLeft().get(1).getLeft();
+		assertTrue("Unexpected Javadoc:" + javadoc, javadoc.contains("The class that manages converting HTML to Markdown"));
 	}
 }

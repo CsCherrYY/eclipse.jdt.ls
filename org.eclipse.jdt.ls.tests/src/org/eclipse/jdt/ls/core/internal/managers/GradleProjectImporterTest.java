@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016-2017 Red Hat Inc. and others.
+ * Copyright (c) 2016-2020 Red Hat Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -22,6 +22,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-import org.apache.commons.io.FileUtils;
 import org.eclipse.buildship.core.BuildConfiguration;
 import org.eclipse.buildship.core.FixedVersionGradleDistribution;
 import org.eclipse.buildship.core.GradleDistribution;
@@ -45,11 +45,13 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.jobs.Job;
 import org.eclipse.jdt.core.IJavaProject;
+import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.internal.launching.StandardVMType;
 import org.eclipse.jdt.launching.IVMInstall;
 import org.eclipse.jdt.launching.IVMInstallType;
 import org.eclipse.jdt.launching.JavaRuntime;
+import org.eclipse.jdt.ls.core.internal.JVMConfigurator;
 import org.eclipse.jdt.ls.core.internal.JavaLanguageServerPlugin;
 import org.eclipse.jdt.ls.core.internal.JobHelpers;
 import org.eclipse.jdt.ls.core.internal.ProjectUtils;
@@ -177,6 +179,7 @@ public class GradleProjectImporterTest extends AbstractGradleBasedTest{
 		File gradleUserHome = null;
 		try {
 			gradleUserHome = Files.createTempDir();
+			gradleUserHome.deleteOnExit();
 			JavaLanguageServerPlugin.getPreferencesManager().getPreferences().setGradleUserHome(gradleUserHome.getAbsolutePath());
 			List<IProject> projects = importProjects("gradle/simple-gradle");
 			assertEquals(2, projects.size());//default + 1 eclipse projects
@@ -188,9 +191,6 @@ public class GradleProjectImporterTest extends AbstractGradleBasedTest{
 			assertEquals(gradleUserHome, projectConfiguration.getBuildConfiguration().getGradleUserHome());
 		} finally {
 			JavaLanguageServerPlugin.getPreferencesManager().getPreferences().setGradleUserHome(gradleUserHomePreference);
-			if (gradleUserHome != null) {
-				FileUtils.deleteDirectory(gradleUserHome);
-			}
 		}
 	}
 
@@ -201,6 +201,10 @@ public class GradleProjectImporterTest extends AbstractGradleBasedTest{
 		IVMInstall defaultVM = JavaRuntime.getDefaultVMInstall();
 		try {
 			IVMInstallType installType = JavaRuntime.getVMInstallType(StandardVMType.ID_STANDARD_VM_TYPE);
+			if (installType == null || installType.getVMInstalls().length == 0) {
+				// https://github.com/eclipse/eclipse.jdt.ls/issues/1646
+				installType = JavaRuntime.getVMInstallType(JVMConfigurator.MAC_OSX_VM_TYPE);
+			}
 			IVMInstall[] vms = installType.getVMInstalls();
 			IVMInstall vm = vms[0];
 			JavaRuntime.setDefaultVMInstall(vm, new NullProgressMonitor());
@@ -225,6 +229,10 @@ public class GradleProjectImporterTest extends AbstractGradleBasedTest{
 		IVMInstall defaultVM = JavaRuntime.getDefaultVMInstall();
 		try {
 			IVMInstallType installType = JavaRuntime.getVMInstallType(StandardVMType.ID_STANDARD_VM_TYPE);
+			if (installType == null || installType.getVMInstalls().length == 0) {
+				// https://github.com/eclipse/eclipse.jdt.ls/issues/1646
+				installType = JavaRuntime.getVMInstallType(JVMConfigurator.MAC_OSX_VM_TYPE);
+			}
 			IVMInstall[] vms = installType.getVMInstalls();
 			IVMInstall vm = vms[0];
 			JavaRuntime.setDefaultVMInstall(vm, new NullProgressMonitor());
@@ -486,8 +494,7 @@ public class GradleProjectImporterTest extends AbstractGradleBasedTest{
 			projectsManager.updateProject(root, true);
 			projectsManager.updateProject(project1, true);
 			projectsManager.updateProject(project2, true);
-			JobHelpers.waitForJobsToComplete();
-			Job.getJobManager().join(CorePlugin.GRADLE_JOB_FAMILY, new NullProgressMonitor());
+			waitForBackgroundJobs();
 			ProjectConfiguration configuration = getProjectConfiguration(root);
 			// check the children .settings/org.eclipse.buildship.core.prefs
 			assertTrue(configuration.getBuildConfiguration().isOverrideWorkspaceSettings());
@@ -514,6 +521,28 @@ public class GradleProjectImporterTest extends AbstractGradleBasedTest{
 		} finally {
 			JavaLanguageServerPlugin.getPreferencesManager().getPreferences().setGradleArguments(arguments);
 		}
+	}
+
+	@Test
+	public void testSettingsGradle() throws Exception {
+			List<IProject> projects = importProjects("gradle/sample");
+			assertEquals(3, projects.size());//default, app, sample
+			IProject root = WorkspaceHelper.getProject("sample");
+			assertIsGradleProject(root);
+			IProject project = WorkspaceHelper.getProject("app");
+			assertIsGradleProject(project);
+			assertIsJavaProject(project);
+			IJavaProject javaProject = JavaCore.create(project);
+			IType type = javaProject.findType("org.apache.commons.lang3.StringUtils");
+			assertNull(type);
+			IFile build2 = project.getFile("/build.gradle2");
+			InputStream contents = build2.getContents();
+			IFile build = project.getFile("/build.gradle");
+			build.setContents(contents, true, false, null);
+			projectsManager.updateProject(project, false);
+			waitForBackgroundJobs();
+			type = javaProject.findType("org.apache.commons.lang3.StringUtils");
+			assertNotNull(type);
 	}
 
 	private ProjectConfiguration getProjectConfiguration(IProject project) {

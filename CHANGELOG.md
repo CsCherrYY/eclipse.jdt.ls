@@ -1,4 +1,55 @@
 # Change Log
+# [0.70.0 (March 5th, 2021)](https://github.com/eclipse/eclipse.jdt.ls/milestone/88?closed=1)
+ * feature - Code actions should return textedits with proper formatting. See [#1157](https://github.com/eclipse/eclipse.jdt.ls/issues/1157).
+ * bug fix - Change location of .m2/ and .tooling/ from HOME. See [#1654](https://github.com/eclipse/eclipse.jdt.ls/issues/1654).
+ * bug fix - Issue with 'Go To Definition'. See [#1634](https://github.com/eclipse/eclipse.jdt.ls/issues/1634).
+ * other - Adopt the helpers from jdt.core.manipulation to deal with the CU's preferences. See [#1666](https://github.com/eclipse/eclipse.jdt.ls/pull/1666).
+ * debt - Tests fail on Windows. See [#996](https://github.com/eclipse/eclipse.jdt.ls/issues/996).
+
+# [0.69.0 (February 11th, 2021)](https://github.com/eclipse/eclipse.jdt.ls/milestone/87?closed=1)
+ * enhancement - Specify output path for invisible project. See [#1593](https://github.com/eclipse/eclipse.jdt.ls/issues/1593).
+ * other - Remove legacy Semantic Highlighting implementation. See [#1649](https://github.com/eclipse/eclipse.jdt.ls/pull/1649).
+ * other - Further semantic tokens improvements. See [#1641](https://github.com/eclipse/eclipse.jdt.ls/pull/1641).
+ * other - Rename 'function' semantic token to 'method'. See [#1608](https://github.com/eclipse/eclipse.jdt.ls/pull/1608).
+
+# [0.68.0 (January 20th, 2021)](https://github.com/eclipse/eclipse.jdt.ls/milestone/86?closed=1)
+ * enhancement - Download sources for the masses. See [#1628](https://github.com/eclipse/eclipse.jdt.ls/pull/1628).
+ * bug fix - Some refactors are missing when the location has diagnostics. See [#1642](https://github.com/eclipse/eclipse.jdt.ls/issues/1642).
+ * bug fix - Should not enable preview compiler options if the tooling doesn't support the early access JDK. See [#1644](https://github.com/eclipse/eclipse.jdt.ls/issues/1644).
+ * bug fix - Enhance MavenProjectImporter to stop scanning the specified exclusion list. See [#1636](https://github.com/eclipse/eclipse.jdt.ls/pull/1636).
+ * build - Update target platform to use Eclipse 2020-12 Release. See [#1639](https://github.com/eclipse/eclipse.jdt.ls/pull/1639).
+
+# [0.67.0 (December 17th, 2020)](https://github.com/eclipse/eclipse.jdt.ls/milestone/85?closed=1)
+ * bug fix - Detect Gradle project by settings.gradle as well. See [#1617](https://github.com/eclipse/eclipse.jdt.ls/pull/1617).
+ * bug fix - Should update Gradle project properly after the build file of a sub Gradle project is updated. See [#1617](https://github.com/eclipse/eclipse.jdt.ls/pull/1617).
+ * bug fix - Long completionItem/resolve and TimeoutException. See [#1624](https://github.com/eclipse/eclipse.jdt.ls/issues/1624).
+ * bug fix - Disable module results for autocomplete. See [#1613](https://github.com/eclipse/eclipse.jdt.ls/issues/1613).
+ * bug fix - Get the project from the linked folder uri. See [#1630](https://github.com/eclipse/eclipse.jdt.ls/pull/1630).
+ * bug fix - Add support to INFO log level. See [#1623](https://github.com/eclipse/eclipse.jdt.ls/pull/1623).
+
+# [0.66.0 (December 2nd, 2020)](https://github.com/eclipse/eclipse.jdt.ls/milestone/84?closed=1)
+ * enhancement - Support inferSelection when extract to field. See [#1619](https://github.com/eclipse/eclipse.jdt.ls/pull/1619).
+ * enhancement - Support inferSelection when extract to variable. See [#1615](https://github.com/eclipse/eclipse.jdt.ls/pull/1615).
+ * bug fix - jdt.ls distro is 10MB heavier because of com.ibm.icu_64.2.0.v20190507-1337.jar. See [#1351](https://github.com/eclipse/eclipse.jdt.ls/issues/1351).
+ * bug fix - Java LS crashes on WSL Alpine. See [#1612](https://github.com/eclipse/eclipse.jdt.ls/pull/1612).
+ * bug fix - End of File exception when opening completion in empty file. See [#1611](https://github.com/eclipse/eclipse.jdt.ls/issues/1611).
+ * other - Update Target Platform to use Eclipse 2020-12 M3. See [#1616](https://github.com/eclipse/eclipse.jdt.ls/pull/1616).
+ * other - Improve the performance of inferSelection. See [#1609](https://github.com/eclipse/eclipse.jdt.ls/pull/1609).
+
+# [0.65.0 (November 19th, 2020)](https://github.com/eclipse/eclipse.jdt.ls/milestone/83?closed=1)
+ * bug fix - Update m2e to 1.17.0.20201112-0751. See [#1596](https://github.com/eclipse/eclipse.jdt.ls/pull/1596).
+ * other - Improve tracing capability of m2e through m2e.logback.configuration. See [#1589](https://github.com/eclipse/eclipse.jdt.ls/pull/1589).
+ * other - Infer expressions if there is no selection range when extracting method. See [#1585](https://github.com/eclipse/eclipse.jdt.ls/pull/1585).
+
+# [0.64.0 (November 4th, 2020)](https://github.com/eclipse/eclipse.jdt.ls/milestone/82?closed=1)
+ * enhancement - Provide method for converting callstack entry to location. See [#1202](https://github.com/eclipse/eclipse.jdt.ls/issues/1202).
+ * enhancement - Hide inline variable/constant commands when no reference found. See [#1573](https://github.com/eclipse/eclipse.jdt.ls/pull/1573) and [#1575](https://github.com/eclipse/eclipse.jdt.ls/pull/1575).
+ * enhancement - Convert a lambda expression to method reference. See [#1571](https://github.com/eclipse/eclipse.jdt.ls/pull/1571).
+ * bug fix - CompletionResultRequestor compares different ICompilationUnit types. See [#1582](https://github.com/eclipse/eclipse.jdt.ls/issues/1582).
+ * bug fix - GTD is not working if referenced library is updated without file name change. See [#1577](https://github.com/eclipse/eclipse.jdt.ls/issues/1577).
+ * bug fix - Fix method ref CompletionItemKind. See [#1574](https://github.com/eclipse/eclipse.jdt.ls/pull/1574).
+ * other - Update Target Platform to Eclipse 2020-12 M1. See [#1567](https://github.com/eclipse/eclipse.jdt.ls/issues/1567).
+
 # [0.63.0 (October 15th, 2020)](https://github.com/eclipse/eclipse.jdt.ls/milestone/81?closed=1)
  * enhancement - Embed m2e 1.17. See [#1562](https://github.com/eclipse/eclipse.jdt.ls/pull/1562).
  * enhancement - Add code actions to add sealed/final/non-sealed modifier on a permitted type declaration. See [#1555](https://github.com/eclipse/eclipse.jdt.ls/issues/1555).

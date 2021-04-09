@@ -31,31 +31,32 @@ import org.eclipse.jdt.core.dom.TypeParameter;
 import org.eclipse.jdt.core.dom.VariableDeclarationFragment;
 
 public enum TokenModifier {
-	// Standard Java modifiers
-	PUBLIC("public"),
-	PRIVATE("private"),
-	PROTECTED("protected"),
+	// Standard LSP token modifiers, see https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_semanticTokens
 	ABSTRACT("abstract"),
 	STATIC("static"),
 	FINAL("readonly"),
-	NATIVE("native"),
-
-	// Additional semantic modifiers
 	DEPRECATED("deprecated"),
+	DECLARATION("declaration"),
+	DOCUMENTATION("documentation"),
+
+	// Custom token modifiers
+	PUBLIC("public"),
+	PRIVATE("private"),
+	PROTECTED("protected"),
+	NATIVE("native"),
 	GENERIC("generic"),
 	TYPE_ARGUMENT("typeArgument"),
-	DECLARATION("declaration"),
 	IMPORT_DECLARATION("importDeclaration");
 
 	/**
 	 * This is the name of the token modifier given to the client, so it
-	 * should be as generic as possible and follow the "standard" (see below)
-	 * token modifier names where applicable. For example, the generic name of
-	 * the final modifier should be "readonly", since it has essentially the same
-	 * meaning. This makes life easier for theme authors, since
-	 * they don't need to think about Java-specific terminology.
+	 * should be as generic as possible and follow the standard LSP (see below)
+	 * token modifier names where applicable. For example, the generic name of the
+	 * {@link #FINAL} modifier is "readonly", since it has similar meaning.
+	 * Using standardized names makes life easier for theme authors, since
+	 * they don't need to know about language-specific terminology.
 	 *
-	 * @see https://code.visualstudio.com/api/language-extensions/semantic-highlight-guide#semantic-token-classification
+	 * @see https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocument_semanticTokens
 	 */
 	private final String genericName;
 
@@ -64,6 +65,12 @@ public enum TokenModifier {
 	 * Use bitwise OR to combine with other token modifiers.
 	 */
 	public final int bitmask = 1 << ordinal();
+
+	/**
+	 * The inverse bitmask for this semantic token modifier.
+	 * Use bitwise AND to remove from other token modifiers.
+	 */
+	public final int inverseBitmask = ~bitmask;
 
 	TokenModifier(String genericName) {
 		this.genericName = genericName;

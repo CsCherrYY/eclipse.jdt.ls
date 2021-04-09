@@ -99,9 +99,8 @@ public class AnonymousTypeCompletionProposal {
 		buf.append(newBody);
 		// use the code formatter
 		String lineDelim = TextUtilities.getDefaultLineDelimiter(document);
-		final IJavaProject project = fCompilationUnit.getJavaProject();
 		IRegion lineInfo = document.getLineInformationOfOffset(fReplacementOffset);
-		Map<String, String> options = project != null ? project.getOptions(true) : JavaCore.getOptions();
+		Map<String, String> options = fCompilationUnit.getOptions(true);
 		String replacementString = CodeFormatterUtil.format(CodeFormatter.K_EXPRESSION, buf.toString(), 0, lineDelim, options);
 		int lineEndOffset = lineInfo.getOffset() + lineInfo.getLength();
 		int p = offset;
@@ -174,7 +173,7 @@ public class AnonymousTypeCompletionProposal {
 					bindings = new IMethodBinding[0];
 				}
 			}
-			CodeGenerationSettings settings = PreferenceManager.getCodeGenerationSettings(fJavaProject.getProject());
+			CodeGenerationSettings settings = PreferenceManager.getCodeGenerationSettings(fCompilationUnit);
 			IMethodBinding[] methodsToOverride = null;
 			settings.createComments = false;
 			List<IMethodBinding> result = new ArrayList<>();

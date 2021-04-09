@@ -19,9 +19,8 @@ import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.core.resources.IResource;
@@ -32,6 +31,7 @@ import org.eclipse.core.runtime.SafeRunner;
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
@@ -158,7 +158,7 @@ public class PreferenceManager {
 	private static boolean updateTemplate(String templateId, String content) {
 		Template template = templates.get(templateId);
 		if ((StringUtils.isEmpty(content) && template == null)
-			|| (template != null && Objects.equal(content, template.getPattern()))) {
+				|| (template != null && Objects.equals(content, template.getPattern()))) {
 			return false;
 		}
 
@@ -178,7 +178,6 @@ public class PreferenceManager {
 		Preferences oldPreferences = this.preferences;
 		this.preferences = preferences;
 		preferencesChanged(oldPreferences, preferences); // listener will get latest preference from getPreferences()
-
 		// Update the templates according to the new preferences.
 		boolean templateChanged = false;
 		List<String> fileHeader = preferences.getFileHeaderTemplate();
@@ -191,7 +190,9 @@ public class PreferenceManager {
 		if (templateChanged) {
 			reloadTemplateStore();
 		}
-
+		Hashtable<String, String> options = JavaCore.getOptions();
+		preferences.updateTabSizeInsertSpaces(options);
+		JavaCore.setOptions(options);
 		// TODO serialize preferences
 	}
 
@@ -253,6 +254,15 @@ public class PreferenceManager {
 		// settings?
 		res.tabWidth = CodeFormatterUtil.getTabWidth(project);
 		res.indentWidth = CodeFormatterUtil.getIndentWidth(project);
+		return res;
+	}
+
+	public static CodeGenerationSettings getCodeGenerationSettings(ICompilationUnit cu) {
+		CodeGenerationSettings res = new CodeGenerationSettings();
+		res.overrideAnnotation = true;
+		res.createComments = false;
+		res.tabWidth = CodeFormatterUtil.getTabWidth(cu);
+		res.indentWidth = CodeFormatterUtil.getIndentWidth(cu);
 		return res;
 	}
 

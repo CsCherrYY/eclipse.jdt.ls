@@ -25,8 +25,10 @@ import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 import org.eclipse.jdt.core.manipulation.JavaManipulation;
 import org.eclipse.jdt.internal.core.manipulation.CodeTemplateContextType;
 import org.eclipse.jface.text.templates.Template;
@@ -71,6 +73,27 @@ public class PreferenceManagerTest {
 		preferences.setMavenUserSettings(null);
 		preferenceManager.update(preferences);
 		verify(mavenConfig).setUserSettingsFile(null);
+	}
+
+	@Test
+	public void testUpdateMavenGlobalSettings() throws Exception {
+		String path = "/foo/bar.xml";
+		Preferences preferences = Preferences.createFrom(Collections.singletonMap(Preferences.MAVEN_GLOBAL_SETTINGS_KEY, path));
+		preferenceManager.update(preferences);
+		verify(mavenConfig).setGlobalSettingsFile(path);
+
+		//check setting the same path doesn't call Maven's config update
+		reset(mavenConfig);
+		when(mavenConfig.getGlobalSettingsFile()).thenReturn(path);
+		preferenceManager.update(preferences);
+		verify(mavenConfig, never()).setGlobalSettingsFile(anyString());
+
+		//check setting null is allowed
+		reset(mavenConfig);
+		when(mavenConfig.getGlobalSettingsFile()).thenReturn(path);
+		preferences.setMavenGlobalSettings(null);
+		preferenceManager.update(preferences);
+		verify(mavenConfig).setGlobalSettingsFile(null);
 	}
 
 	@Test
@@ -134,5 +157,19 @@ public class PreferenceManagerTest {
 		template = JavaManipulation.getCodeTemplateStore().findTemplateById(CodeTemplateContextType.TYPECOMMENT_ID);
 		assertNotNull(template);
 		assertEquals("/** */", template.getPattern());
+	}
+
+	@Test
+	public void testInsertSpacesTabSize() {
+		preferenceManager.initialize();
+		Preferences preferences = new Preferences();
+		preferenceManager.update(preferences);
+		assertTrue(preferenceManager.getPreferences().isInsertSpaces());
+		assertEquals(4, preferenceManager.getPreferences().getTabSize());
+		Map<String, String> eclipseOptions = JavaCore.getOptions();
+		String tabSize = eclipseOptions.get(DefaultCodeFormatterConstants.FORMATTER_TAB_SIZE);
+		assertEquals(4, Integer.valueOf(tabSize).intValue());
+		String insertSpaces = eclipseOptions.get(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR);
+		assertEquals(JavaCore.SPACE, insertSpaces);
 	}
 }

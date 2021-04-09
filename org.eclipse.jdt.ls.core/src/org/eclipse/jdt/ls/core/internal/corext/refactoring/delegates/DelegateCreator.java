@@ -361,11 +361,11 @@ public abstract class DelegateCreator {
 	public void createEdit() throws JavaModelException {
 		try {
 			IDocument document= new Document(fDelegateRewrite.getCu().getBuffer().getContents());
-			TextEdit edit= fDelegateRewrite.getASTRewrite().rewriteAST(document, fDelegateRewrite.getCu().getJavaProject().getOptions(true));
+			TextEdit edit= fDelegateRewrite.getASTRewrite().rewriteAST(document, fDelegateRewrite.getCu().getOptions(true));
 			edit.apply(document, TextEdit.UPDATE_REGIONS);
 
-			int tabWidth = CodeFormatterUtil.getTabWidth(fOriginalRewrite.getCu().getJavaProject());
-			int identWidth = CodeFormatterUtil.getIndentWidth(fOriginalRewrite.getCu().getJavaProject());
+			int tabWidth = CodeFormatterUtil.getTabWidth(fOriginalRewrite.getCu());
+			int identWidth = CodeFormatterUtil.getIndentWidth(fOriginalRewrite.getCu());
 
 			String newSource= Strings.trimIndentation(document.get(fTrackedPosition.getStartPosition(), fTrackedPosition.getLength()),
 					tabWidth, identWidth, false);

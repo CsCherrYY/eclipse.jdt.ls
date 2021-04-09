@@ -52,6 +52,7 @@ import org.eclipse.jdt.ls.core.internal.JavaClientConnection;
 import org.eclipse.jdt.ls.core.internal.JavaLanguageServerPlugin;
 import org.eclipse.jdt.ls.core.internal.JsonMessageHelper;
 import org.eclipse.jdt.ls.core.internal.ProjectUtils;
+import org.eclipse.jdt.ls.core.internal.ResourceUtils;
 import org.eclipse.jdt.ls.core.internal.TextEditUtil;
 import org.eclipse.jdt.ls.core.internal.WorkspaceHelper;
 import org.eclipse.jdt.ls.core.internal.contentassist.JavadocCompletionProposal;
@@ -305,7 +306,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 
 		CompletionItem resolvedItem = server.resolveCompletionItem(ctor).join();
 		assertNotNull(resolvedItem);
-		TextEdit te = resolvedItem.getTextEdit();
+		TextEdit te = resolvedItem.getTextEdit().getLeft();
 		assertNotNull(te);
 		assertEquals("Object()",te.getNewText());
 		assertNotNull(te.getRange());
@@ -340,8 +341,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("(package) java.sql", item.getDetail());
 		assertEquals(CompletionItemKind.Module, item.getKind() );
 		assertEquals("999999215", item.getSortText());
-		assertNotNull(item.getTextEdit());
-		TextEdit te = item.getTextEdit();
+		assertNotNull(item.getTextEdit().getLeft());
+		TextEdit te = item.getTextEdit().getLeft();
 		assertNotNull(te);
 		assertEquals("java.sql.${0:*};", te.getNewText());
 		assertNotNull(te.getRange());
@@ -374,8 +375,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("999999999", item.getSortText());
 		assertEquals(item.getInsertTextFormat(), InsertTextFormat.Snippet);
 		assertNotNull(item.getTextEdit());
-		assertEquals("\n * ${0}\n * @param i\n * @param s\n", item.getTextEdit().getNewText());
-		Range range = item.getTextEdit().getRange();
+		assertEquals("\n * ${0}\n * @param i\n * @param s\n", item.getTextEdit().getLeft().getNewText());
+		Range range = item.getTextEdit().getLeft().getRange();
 		assertEquals(1, range.getStart().getLine());
 		assertEquals(4, range.getStart().getCharacter());
 		assertEquals(1, range.getEnd().getLine());
@@ -407,8 +408,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("999999999", item.getSortText());
 		assertEquals(item.getInsertTextFormat(), InsertTextFormat.PlainText);
 		assertNotNull(item.getTextEdit());
-		assertEquals("\n * @param i\n * @param s\n", item.getTextEdit().getNewText());
-		Range range = item.getTextEdit().getRange();
+		assertEquals("\n * @param i\n * @param s\n", item.getTextEdit().getLeft().getNewText());
+		Range range = item.getTextEdit().getLeft().getRange();
 		assertEquals(1, range.getStart().getLine());
 		assertEquals(4, range.getStart().getCharacter());
 		assertEquals(1, range.getEnd().getLine());
@@ -499,8 +500,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 			assertEquals("999999999", item.getSortText());
 			assertEquals(item.getInsertTextFormat(), InsertTextFormat.Snippet);
 			assertNotNull(item.getTextEdit());
-			assertEquals("\n * ${0}\n * @param name\n * @param age\n", item.getTextEdit().getNewText());
-			Range range = item.getTextEdit().getRange();
+			assertEquals("\n * ${0}\n * @param name\n * @param age\n", item.getTextEdit().getLeft().getNewText());
+			Range range = item.getTextEdit().getLeft().getRange();
 			assertEquals(1, range.getStart().getLine());
 			assertEquals(3, range.getStart().getCharacter());
 			assertEquals(1, range.getEnd().getLine());
@@ -545,8 +546,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 			assertEquals("999999999", item.getSortText());
 			assertEquals(item.getInsertTextFormat(), InsertTextFormat.PlainText);
 			assertNotNull(item.getTextEdit());
-			assertEquals("\n * @param name\n * @param age\n", item.getTextEdit().getNewText());
-			Range range = item.getTextEdit().getRange();
+			assertEquals("\n * @param name\n * @param age\n", item.getTextEdit().getLeft().getNewText());
+			Range range = item.getTextEdit().getLeft().getRange();
 			assertEquals(1, range.getStart().getLine());
 			assertEquals(3, range.getStart().getCharacter());
 			assertEquals(1, range.getEnd().getLine());
@@ -582,7 +583,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals(CompletionItemKind.EnumMember, daysFieldItem.getKind());
 		assertEquals("999999210", daysFieldItem.getSortText());
 
-		TextEdit teDays = daysFieldItem.getTextEdit();
+		TextEdit teDays = daysFieldItem.getTextEdit().getLeft();
 		assertNotNull(teDays);
 		assertEquals("DAYS;", teDays.getNewText());
 		assertNotNull(teDays.getRange());
@@ -592,12 +593,12 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals(0, secondsRange.getEnd().getLine());
 
 		//Check other fields are listed alphabetically
-		assertEquals("HOURS;", list.getItems().get(1).getTextEdit().getNewText());
-		assertEquals("MICROSECONDS;", list.getItems().get(2).getTextEdit().getNewText());
-		assertEquals("MILLISECONDS;", list.getItems().get(3).getTextEdit().getNewText());
-		assertEquals("MINUTES;", list.getItems().get(4).getTextEdit().getNewText());
-		assertEquals("NANOSECONDS;", list.getItems().get(5).getTextEdit().getNewText());
-		assertEquals("SECONDS;", list.getItems().get(6).getTextEdit().getNewText());
+		assertEquals("HOURS;", list.getItems().get(1).getTextEdit().getLeft().getNewText());
+		assertEquals("MICROSECONDS;", list.getItems().get(2).getTextEdit().getLeft().getNewText());
+		assertEquals("MILLISECONDS;", list.getItems().get(3).getTextEdit().getLeft().getNewText());
+		assertEquals("MINUTES;", list.getItems().get(4).getTextEdit().getLeft().getNewText());
+		assertEquals("NANOSECONDS;", list.getItems().get(5).getTextEdit().getLeft().getNewText());
+		assertEquals("SECONDS;", list.getItems().get(6).getTextEdit().getLeft().getNewText());
 
 		//// .values() - static method
 		CompletionItem valuesMethodItem = list.getItems().get(7);
@@ -606,7 +607,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("valueOf(String) : TimeUnit", valuesMethodItem.getLabel());
 		assertEquals(CompletionItemKind.Method, valuesMethodItem.getKind());
 		assertEquals("999999211", valuesMethodItem.getSortText());
-		TextEdit teValues = valuesMethodItem.getTextEdit();
+		TextEdit teValues = valuesMethodItem.getTextEdit().getLeft();
 		assertNotNull(teValues);
 		assertEquals("valueOf;", teValues.getNewText());
 		assertNotNull(teValues.getRange());
@@ -645,8 +646,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals(CompletionItemKind.Method, ci.getKind());
 		assertEquals("999999019", ci.getSortText());
 
-		assertNotNull(ci.getTextEdit());
-		assertTextEdit(5, 4, 6, "put", ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
+		assertTextEdit(5, 4, 6, "put", ci.getTextEdit().getLeft());
 		assertNotNull(ci.getAdditionalTextEdits());
 		List<TextEdit> edits = ci.getAdditionalTextEdits();
 		assertEquals(2, edits.size());
@@ -678,12 +679,12 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertTrue(ci.getDetail().matches("java.util.HashMap.put\\(String \\w+, String \\w+\\) : String"));
 		assertEquals(CompletionItemKind.Method, ci.getKind());
 		assertEquals("999999019", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		try {
-			assertTextEdit(5, 4, 6, "put(${1:key}, ${2:value})", ci.getTextEdit());
+			assertTextEdit(5, 4, 6, "put(${1:key}, ${2:value})", ci.getTextEdit().getLeft());
 		} catch (ComparisonFailure e) {
 			//In case the JDK has no sources
-			assertTextEdit(5, 4, 6, "put(${1:arg0}, ${2:arg1})", ci.getTextEdit());
+			assertTextEdit(5, 4, 6, "put(${1:arg0}, ${2:arg1})", ci.getTextEdit().getLeft());
 		}
 		assertNotNull(ci.getAdditionalTextEdits());
 		List<TextEdit> edits = ci.getAdditionalTextEdits();
@@ -725,8 +726,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 			assertEquals("test", ci.getInsertText());
 			assertEquals(CompletionItemKind.Method, ci.getKind());
 			assertEquals("999999163", ci.getSortText());
-			assertNotNull(ci.getTextEdit());
-			assertTextEdit(5, 2, 5, expected, ci.getTextEdit());
+			assertNotNull(ci.getTextEdit().getLeft());
+			assertTextEdit(5, 2, 5, expected, ci.getTextEdit().getLeft());
 		} finally {
 			JavaLanguageServerPlugin.getPreferencesManager().getPreferences().setGuessMethodArguments(oldGuessMethodArguments);
 		}
@@ -757,8 +758,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 			assertEquals("test", ci.getInsertText());
 			assertEquals(CompletionItemKind.Method, ci.getKind());
 			assertEquals("999999163", ci.getSortText());
-			assertNotNull(ci.getTextEdit());
-			assertTextEdit(4, 2, 5, "test(${1:str}, ${2:0});", ci.getTextEdit());
+			assertNotNull(ci.getTextEdit().getLeft());
+			assertTextEdit(4, 2, 5, "test(${1:str}, ${2:0});", ci.getTextEdit().getLeft());
 		} finally {
 			JavaLanguageServerPlugin.getPreferencesManager().getPreferences().setGuessMethodArguments(oldGuessMethodArguments);
 		}
@@ -790,8 +791,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 			assertEquals("test", ci.getInsertText());
 			assertEquals(CompletionItemKind.Method, ci.getKind());
 			assertEquals("999999163", ci.getSortText());
-			assertNotNull(ci.getTextEdit());
-			assertTextEdit(5, 2, 5, "test(${1:one}, ${2:two});", ci.getTextEdit());
+			assertNotNull(ci.getTextEdit().getLeft());
+			assertTextEdit(5, 2, 5, "test(${1:one}, ${2:two});", ci.getTextEdit().getLeft());
 		} finally {
 			JavaLanguageServerPlugin.getPreferencesManager().getPreferences().setGuessMethodArguments(oldGuessMethodArguments);
 		}
@@ -822,8 +823,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 			assertEquals("A", ci.getInsertText());
 			assertEquals(CompletionItemKind.Constructor, ci.getKind());
 			assertEquals("999999051", ci.getSortText());
-			assertNotNull(ci.getTextEdit());
-			assertTextEdit(3, 6, 7, "A(${1:str})", ci.getTextEdit());
+			assertNotNull(ci.getTextEdit().getLeft());
+			assertTextEdit(3, 6, 7, "A(${1:str})", ci.getTextEdit().getLeft());
 		} finally {
 			JavaLanguageServerPlugin.getPreferencesManager().getPreferences().setGuessMethodArguments(oldGuessMethodArguments);
 		}
@@ -860,7 +861,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("myTestString", item.getInsertText());
 		assertEquals("Foo.myTestString : String", item.getDetail());
 		assertNotNull(item.getTextEdit());
-		assertTextEdit(4, 8, 15, "myTestString", item.getTextEdit());
+		assertTextEdit(4, 8, 15, "myTestString", item.getTextEdit().getLeft());
 		//Not checking the range end character
 	}
 
@@ -885,7 +886,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals(CompletionItemKind.Interface, item.getKind());
 		assertEquals("Map", item.getInsertText());
 		assertNotNull(item.getTextEdit());
-		assertTextEdit(3, 3, 15, "java.util.Map", item.getTextEdit());
+		assertTextEdit(3, 3, 15, "java.util.Map", item.getTextEdit().getLeft());
 		assertTrue(item.getFilterText().startsWith("java.util.Ma"));
 		//Not checking the range end character
 	}
@@ -930,7 +931,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 
 		CompletionItem resolvedItem = server.resolveCompletionItem(item).join();
 		assertNotNull(resolvedItem);
-		TextEdit te = item.getTextEdit();
+		TextEdit te = item.getTextEdit().getLeft();
 		assertNotNull(te);
 		assertEquals("org.sample", te.getNewText());
 		assertNotNull(te.getRange());
@@ -1267,7 +1268,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		CompletionItem item = items.get(9);
 		assertEquals("interface", item.getLabel());
 		String te = item.getInsertText();
-		assertEquals("package org.sample;\n\n/**\n * Test\n */\npublic interface Test {\n\n\t${0}\n}", te);
+		assertEquals("package org.sample;\n\n/**\n * Test\n */\npublic interface Test {\n\n\t${0}\n}", ResourceUtils.dos2Unix(te));
 
 		//check resolution doesn't blow up (https://github.com/eclipse/eclipse.jdt.ls/issues/675)
 		assertSame(item, server.resolveCompletionItem(item).join());
@@ -1366,7 +1367,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		CompletionItem item = items.get(8);
 		assertEquals("class", item.getLabel());
 		String te = item.getInsertText();
-		assertEquals("package org.sample;\n\n/**\n * Test\n */\npublic class Test {\n\n\t${0}\n}", te);
+		assertEquals("package org.sample;\n\n/**\n * Test\n */\npublic class Test {\n\n\t${0}\n}", ResourceUtils.dos2Unix(te));
 	}
 
 	@Test
@@ -1477,7 +1478,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		CompletionItem item = items.get(11);
 		assertEquals("record", item.getLabel());
 		String te = item.getInsertText();
-		assertEquals("package org.sample;\n\n/**\n * Test\n */\npublic record Test(${0}) {\n}", te);
+		assertEquals("package org.sample;\n\n/**\n * Test\n */\npublic record Test(${0}) {\n}", ResourceUtils.dos2Unix(te));
 
 		//check resolution doesn't blow up (https://github.com/eclipse/eclipse.jdt.ls/issues/675)
 		assertSame(item, server.resolveCompletionItem(item).join());
@@ -1638,7 +1639,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		CompletionItem oride = filtered.get(0);
 		assertEquals("toString", oride.getInsertText());
 		assertNotNull(oride.getTextEdit());
-		String text = oride.getTextEdit().getNewText();
+		String text = oride.getTextEdit().getLeft().getNewText();
 		StringBuilder expectedText = new StringBuilder();
 		if (overridesSuperClass) {
 			expectedText.append("@Override\n");
@@ -1682,7 +1683,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		CompletionItem oride = filtered.get(0);
 		assertEquals("run", oride.getInsertText());
 		assertNotNull(oride.getTextEdit());
-		String text = oride.getTextEdit().getNewText();
+		String text = oride.getTextEdit().getLeft().getNewText();
 		StringBuilder expectedText = new StringBuilder();
 		if (overridesInterface) {
 			expectedText.append("@Override\n");
@@ -1720,7 +1721,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		CompletionItem oride = filtered.get(0);
 		assertEquals("getParent", oride.getInsertText());
 		assertNotNull(oride.getTextEdit());
-		String text = oride.getTextEdit().getNewText();
+		String text = oride.getTextEdit().getLeft().getNewText();
 
 		String expectedText = "@Override\n"+
 				"protected File getParent(File file, int depth) {\n" +
@@ -1755,7 +1756,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		CompletionItem oride = filtered.get(0);
 		assertEquals("deleteSomething", oride.getInsertText());
 		assertNotNull(oride.getTextEdit());
-		String text = oride.getTextEdit().getNewText();
+		String text = oride.getTextEdit().getLeft().getNewText();
 
 		String expectedText = "@Override\n"+
 				"protected void deleteSomething() throws IOException {\n" +
@@ -1818,13 +1819,13 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("getStrField", ci.getInsertText());
 		assertEquals(CompletionItemKind.Method, ci.getKind());
 		assertEquals("999999979", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 4, 7, "/**\n" +
 				 " * @return the strField\n" +
 				 " */\n" +
 				"public String getStrField() {\n" +
 				"	return strField;\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -1850,11 +1851,11 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("getStrField", ci.getInsertText());
 		assertEquals(CompletionItemKind.Method, ci.getKind());
 		assertEquals("999999979", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 4, 7,
 				"public String getStrField() {\n" +
 				"	return strField;\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -1880,13 +1881,13 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("isBoolField", ci.getInsertText());
 		assertEquals(CompletionItemKind.Method, ci.getKind());
 		assertEquals("999999979", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 4, 6, "/**\n" +
 				 " * @return the boolField\n" +
 				 " */\n" +
 				"public boolean isBoolField() {\n" +
 				"	return boolField;\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -1911,13 +1912,13 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("setStrField", ci.getInsertText());
 		assertEquals(CompletionItemKind.Method, ci.getKind());
 		assertEquals("999999979", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 4, 7, "/**\n" +
 				" * @param strField the strField to set\n" +
 				 " */\n" +
 				"public void setStrField(String strField) {\n" +
 				"	this.strField = strField;\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -1945,10 +1946,10 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals(CompletionItemKind.Constructor, ci.getKind());
 		assertEquals("java.Foo.IFoo", ci.getDetail());
 		assertEquals("999998684", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 23, 23, "IFoo(){\n" +
 				"	${0}\n" +
-				"};", ci.getTextEdit());
+				"};", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -1976,10 +1977,10 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("Foo.IFoo", ci.getInsertText());
 		assertEquals(CompletionItemKind.Constructor, ci.getKind());
 		assertEquals("999998684", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 23, 23, "IFoo(){\n" +
 				"	${0}\n" +
-				"};", ci.getTextEdit());
+				"};", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2003,10 +2004,10 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("Runnable", ci.getInsertText());
 		assertEquals(CompletionItemKind.Class, ci.getKind());
 		assertEquals("999999372", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 20, 22, "(){\n" +
 				"	${0}\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2030,10 +2031,10 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("Runnable", ci.getInsertText());
 		assertEquals(CompletionItemKind.Class, ci.getKind());
 		assertEquals("999999372", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 20, 24, "(){\n" +
 				"	${0}\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2059,10 +2060,10 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("Runnable", ci.getInsertText());
 		assertEquals(CompletionItemKind.Class, ci.getKind());
 		assertEquals("999999372", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 32, 33, "(){\n" +
 				"	${0}\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2089,10 +2090,10 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("Runnable", ci.getInsertText());
 		assertEquals(CompletionItemKind.Class, ci.getKind());
 		assertEquals("999999372", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 32, 33, "(){\n" +
 				"	${0}\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2114,10 +2115,10 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("Runnable", ci.getInsertText());
 		assertEquals(CompletionItemKind.Class, ci.getKind());
 		assertEquals("999999372", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 33, 33, "(){\n" +
 				"	${0}\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2145,10 +2146,10 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("Runnable", ci.getInsertText());
 		assertEquals(CompletionItemKind.Class, ci.getKind());
 		assertEquals("999999372", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		assertTextEdit(2, 20, 22, "() {\n" +
 				"\n" +
-				"}", ci.getTextEdit());
+				"}", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2174,7 +2175,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("ArrayList - java.util", ci.getLabel());
 		assertEquals("java.util.ArrayList", ci.getDetail());
 		assertEquals("999999148", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2198,8 +2199,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("Foo$Bar", ci.getInsertText());
 		assertEquals(CompletionItemKind.Constructor, ci.getKind());
 		assertEquals("999999115", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
-		assertTextEdit(2, 12, 15, "Foo\\$Bar()", ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
+		assertTextEdit(2, 12, 15, "Foo\\$Bar()", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2225,8 +2226,8 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals(CompletionItemKind.Constructor, ci.getKind());
 		assertEquals("999999115", ci.getSortText());
 
-		assertNotNull(ci.getTextEdit());
-		assertTextEdit(2, 12, 15, "Foo$Bar", ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
+		assertTextEdit(2, 12, 15, "Foo$Bar", ci.getTextEdit().getLeft());
 	}
 
 	@Test
@@ -2315,9 +2316,9 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertEquals("testInt", ci.getInsertText());
 		assertEquals(CompletionItemKind.Field, ci.getKind());
 		assertEquals("999998554", ci.getSortText());
-		assertNotNull(ci.getTextEdit());
+		assertNotNull(ci.getTextEdit().getLeft());
 		List<TextEdit> edits = new ArrayList<>();
-		edits.add(ci.getTextEdit());
+		edits.add(ci.getTextEdit().getLeft());
 		String returned = TextEditUtil.apply(unit, edits);
 		//@formatter:off
 			String expected =
@@ -2349,9 +2350,9 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 			assertEquals("testInt", ci.getInsertText());
 			assertEquals(CompletionItemKind.Field, ci.getKind());
 			assertEquals("999998554", ci.getSortText());
-			assertNotNull(ci.getTextEdit());
+			assertNotNull(ci.getTextEdit().getLeft());
 			List<TextEdit> edits = new ArrayList<>();
-			edits.add(ci.getTextEdit());
+			edits.add(ci.getTextEdit().getLeft());
 			String returned = TextEditUtil.apply(unit, edits);
 			//@formatter:off
 				String expected =
@@ -3023,7 +3024,7 @@ public class CompletionHandlerTest extends AbstractCompilationUnitBasedTest {
 		assertNotNull(list);
 		CompletionItem ci = list.getItems().stream().filter(item -> item.getLabel().equals("run() : void")).findFirst().orElse(null);
 		assertNotNull(ci);
-		assertEquals("public void run() {};", ci.getTextEdit().getNewText());
+		assertEquals("public void run() {};", ci.getTextEdit().getLeft().getNewText());
 	}
 
 	private String createCompletionRequest(ICompilationUnit unit, int line, int kar) {

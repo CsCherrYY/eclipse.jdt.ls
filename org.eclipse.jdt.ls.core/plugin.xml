@@ -56,6 +56,9 @@
                   id="java.edit.organizeImports">
             </command>
             <command
+                  id="java.edit.stringFormatting">
+            </command>
+            <command
                   id="java.project.updateSourceAttachment">
             </command>
             <command
@@ -93,6 +96,15 @@
             </command>
             <command
                   id="java.project.import">
+            </command>
+            <command
+                  id="java.project.resolveStackTraceLocation">
+            </command>
+            <command
+                  id="java.navigate.openTypeHierarchy">
+            </command>
+            <command
+                  id="java.navigate.resolveTypeHierarchy">
             </command>
       </delegateCommandHandler>
    </extension>

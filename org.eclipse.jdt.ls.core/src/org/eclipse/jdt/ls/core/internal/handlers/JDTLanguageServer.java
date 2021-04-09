@@ -41,13 +41,13 @@ import org.eclipse.jdt.ls.core.internal.BuildWorkspaceStatus;
 import org.eclipse.jdt.ls.core.internal.JDTUtils;
 import org.eclipse.jdt.ls.core.internal.JSONUtility;
 import org.eclipse.jdt.ls.core.internal.JVMConfigurator;
+import org.eclipse.jdt.ls.core.internal.JavaClientConnection;
 import org.eclipse.jdt.ls.core.internal.JavaClientConnection.JavaLanguageClient;
 import org.eclipse.jdt.ls.core.internal.JavaLanguageServerPlugin;
 import org.eclipse.jdt.ls.core.internal.JobHelpers;
 import org.eclipse.jdt.ls.core.internal.LanguageServerWorkingCopyOwner;
 import org.eclipse.jdt.ls.core.internal.ServiceStatus;
 import org.eclipse.jdt.ls.core.internal.codemanipulation.GenerateGetterSetterOperation.AccessorField;
-import org.eclipse.jdt.ls.core.internal.handlers.FileEventHandler.FileRenameParams;
 import org.eclipse.jdt.ls.core.internal.handlers.FindLinksHandler.FindLinksParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateAccessorsHandler.GenerateAccessorsParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateConstructorsHandler.CheckConstructorsResponse;
@@ -56,6 +56,8 @@ import org.eclipse.jdt.ls.core.internal.handlers.GenerateDelegateMethodsHandler.
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateDelegateMethodsHandler.GenerateDelegateMethodsParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateToStringHandler.CheckToStringResponse;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateToStringHandler.GenerateToStringParams;
+import org.eclipse.jdt.ls.core.internal.handlers.InferSelectionHandler.InferSelectionParams;
+import org.eclipse.jdt.ls.core.internal.handlers.InferSelectionHandler.SelectionInfo;
 import org.eclipse.jdt.ls.core.internal.handlers.GetRefactorEditHandler.GetRefactorEditParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GetRefactorEditHandler.RefactorWorkspaceEdit;
 import org.eclipse.jdt.ls.core.internal.handlers.HashCodeEqualsHandler.CheckHashCodeEqualsResponse;
@@ -120,6 +122,7 @@ import org.eclipse.lsp4j.PrepareRenameParams;
 import org.eclipse.lsp4j.PrepareRenameResult;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.ReferenceParams;
+import org.eclipse.lsp4j.RenameFilesParams;
 import org.eclipse.lsp4j.RenameParams;
 import org.eclipse.lsp4j.SelectionRange;
 import org.eclipse.lsp4j.SelectionRangeParams;
@@ -210,6 +213,11 @@ public class JDTLanguageServer extends BaseJDTLanguageServer implements Language
 		pm.setConnection(client);
 		WorkingCopyOwner.setPrimaryBufferProvider(this.workingCopyOwner);
 		this.documentLifeCycleHandler = new DocumentLifeCycleHandler(this.client, preferenceManager, pm, true);
+	}
+
+	// For testing purpose
+	public void setClientConnection(JavaClientConnection client) {
+		this.client = client;
 	}
 
 	//For testing purposes
@@ -461,7 +469,7 @@ public class JDTLanguageServer extends BaseJDTLanguageServer implements Language
 		} catch (CoreException e) {
 			JavaLanguageServerPlugin.logException(e.getMessage(), e);
 		}
-		FormatterManager.configureFormatter(preferenceManager, pm);
+		FormatterManager.configureFormatter(preferenceManager.getPreferences());
 		logInfo(">> New configuration: " + settings);
 	}
 
@@ -768,18 +776,10 @@ public class JDTLanguageServer extends BaseJDTLanguageServer implements Language
 	}
 
 	@Override
-	public CompletableFuture<WorkspaceEdit> didRenameFiles(FileRenameParams params) {
-		logInfo(">> document/didRenameFiles");
+	public CompletableFuture<WorkspaceEdit> willRenameFiles(RenameFilesParams params) {
+		logInfo(">> workspace/willRenameFiles");
 		return computeAsyncWithClientProgress((monitor) -> {
 			waitForLifecycleJobs(monitor);
-			return FileEventHandler.handleRenameFiles(params, monitor);
-		});
-	}
-
-	@Override
-	public CompletableFuture<WorkspaceEdit> willRenameFiles(FileRenameParams params) {
-		logInfo(">> document/willRenameFiles");
-		return computeAsyncWithClientProgress((monitor) -> {
 			return FileEventHandler.handleWillRenameFiles(params, monitor);
 		});
 	}
@@ -937,6 +937,12 @@ public class JDTLanguageServer extends BaseJDTLanguageServer implements Language
 	public CompletableFuture<RefactorWorkspaceEdit> getRefactorEdit(GetRefactorEditParams params) {
 		logInfo(">> java/getRefactorEdit");
 		return computeAsync((monitor) -> GetRefactorEditHandler.getEditsForRefactor(params));
+	}
+
+	@Override
+	public CompletableFuture<List<SelectionInfo>> inferSelection(InferSelectionParams params) {
+		logInfo(">> java/inferSelection");
+		return computeAsync((monitor) -> InferSelectionHandler.inferSelectionsForRefactor(params));
 	}
 
 	@Override

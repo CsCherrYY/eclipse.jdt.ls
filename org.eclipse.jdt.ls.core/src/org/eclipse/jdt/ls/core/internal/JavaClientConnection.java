@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016-2018 Red Hat Inc. and others.
+ * Copyright (c) 2016-2020 Red Hat Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -24,13 +24,13 @@ import org.eclipse.jdt.ls.core.internal.lsp.ExecuteCommandProposedClient;
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams;
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse;
 import org.eclipse.lsp4j.Command;
+import org.eclipse.lsp4j.ConfigurationParams;
 import org.eclipse.lsp4j.ExecuteCommandParams;
 import org.eclipse.lsp4j.MessageActionItem;
 import org.eclipse.lsp4j.MessageParams;
 import org.eclipse.lsp4j.MessageType;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.RegistrationParams;
-import org.eclipse.lsp4j.SemanticHighlightingParams;
 import org.eclipse.lsp4j.ShowMessageRequestParams;
 import org.eclipse.lsp4j.UnregistrationParams;
 import org.eclipse.lsp4j.WorkspaceEdit;
@@ -216,10 +216,10 @@ public class JavaClientConnection {
 	}
 
 	/**
-	 * @see {@link LanguageClient#semanticHighlighting(SemanticHighlightingParams)}
+	 * @see {@link LanguageClient#configuration(ConfigurationParams)}
 	 */
-	public void semanticHighlighting(SemanticHighlightingParams params) {
-		client.semanticHighlighting(params);
+	public List<Object> configuration(ConfigurationParams configurationParams) {
+		return this.client.configuration(configurationParams).join();
 	}
 
 	public void disconnect() {

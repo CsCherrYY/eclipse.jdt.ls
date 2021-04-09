@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2018-2019 Microsoft Corporation and others.
+ * Copyright (c) 2018-2021 Microsoft Corporation and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -19,9 +19,14 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
+import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.Path;
 import org.eclipse.jdt.core.IClasspathEntry;
@@ -32,6 +37,7 @@ import org.eclipse.jdt.ls.core.internal.JavaProjectHelper;
 import org.eclipse.jdt.ls.core.internal.ProjectUtils;
 import org.eclipse.jdt.ls.core.internal.TestVMType;
 import org.eclipse.jdt.ls.core.internal.preferences.ClientPreferences;
+import org.eclipse.jdt.ls.core.internal.preferences.Preferences;
 import org.eclipse.lsp4j.FileSystemWatcher;
 import org.junit.Test;
 
@@ -93,13 +99,13 @@ public class InvisibleProjectImporterTest extends AbstractInvisibleProjectBasedT
 		assertEquals("foo-sources.jar", classpath[2].getSourceAttachmentPath().lastSegment());
 
 		List<FileSystemWatcher> watchers = projectsManager.registerWatchers();
-		watchers.sort((a, b) -> a.getGlobPattern().compareTo(b.getGlobPattern()));
+		//watchers.sort((a, b) -> a.getGlobPattern().compareTo(b.getGlobPattern()));
 		assertEquals(10, watchers.size()); // basic(8) + project(1) + library(1)
-		String srcGlobPattern = watchers.get(7).getGlobPattern();
+		String srcGlobPattern = watchers.stream().filter(w -> "**/src/**".equals(w.getGlobPattern())).findFirst().get().getGlobPattern();
 		assertTrue("Unexpected source glob pattern: " + srcGlobPattern, srcGlobPattern.equals("**/src/**"));
-		String projGlobPattern = watchers.get(8).getGlobPattern();
+		String projGlobPattern = watchers.stream().filter(w -> w.getGlobPattern().endsWith(projectFolder.getName() + "/**")).findFirst().get().getGlobPattern();
 		assertTrue("Unexpected project glob pattern: " + projGlobPattern, projGlobPattern.endsWith(projectFolder.getName() + "/**"));
-		String libGlobPattern = watchers.get(9).getGlobPattern();
+		String libGlobPattern = watchers.stream().filter(w -> w.getGlobPattern().endsWith(projectFolder.getName() + "/lib/**")).findFirst().get().getGlobPattern();
 		assertTrue("Unexpected library glob pattern: " + libGlobPattern, libGlobPattern.endsWith(projectFolder.getName() + "/lib/**"));
 	}
 
@@ -205,6 +211,183 @@ public class InvisibleProjectImporterTest extends AbstractInvisibleProjectBasedT
 			assertEquals(JavaCore.DISABLED, javaProject.getOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, false));
 		} finally {
 			TestVMType.setTestJREAsDefault(defaultJVM);
+		}
+	}
+
+	@Test
+	public void testSpecifyingOutputPath() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectOutputPath("output");
+		IProject invisibleProject = copyAndImportFolder("singlefile/java14", "foo/bar/Foo.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+		assertEquals(String.join("/", "", javaProject.getElementName(), ProjectUtils.WORKSPACE_LINK, "output"), javaProject.getOutputLocation().toString());
+	}
+
+	@Test
+	public void testSpecifyingOutputPathInsideSourcePath() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectOutputPath("output");
+		IProject invisibleProject = copyAndImportFolder("singlefile/java14", "foo/bar/Foo.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+		boolean isOutputExcluded = false;
+		for (IClasspathEntry entry : javaProject.getRawClasspath()) {
+			if (entry.getEntryKind() != IClasspathEntry.CPE_SOURCE) {
+				continue;
+			}
+			for (IPath excludePath : entry.getExclusionPatterns()) {
+				if (excludePath.toString().equals("output/")) {
+					isOutputExcluded = true;
+					break;
+				}
+			}
+		}
+		assertTrue("Output path should be excluded from source path", isOutputExcluded);
+	}
+
+	@Test(expected = CoreException.class)
+	public void testSpecifyingOutputPathEqualToSourcePath() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectOutputPath("src");
+		copyAndImportFolder("singlefile/simple", "src/App.java");
+		waitForBackgroundJobs();
+	}
+
+	@Test(expected = CoreException.class)
+	public void testSpecifyingAbsoluteOutputPath() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectOutputPath(new File("projects").getAbsolutePath());
+		copyAndImportFolder("singlefile/simple", "src/App.java");
+		waitForBackgroundJobs();
+	}
+
+	@Test
+	public void testSpecifyingEmptyOutputPath() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectOutputPath("");
+		IProject invisibleProject = copyAndImportFolder("singlefile/simple", "src/App.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+		assertEquals(String.join("/", "", javaProject.getElementName(), "bin"), javaProject.getOutputLocation().toString());
+	}
+
+	@Test
+	public void testSpecifyingSourcePaths() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectSourcePaths(Arrays.asList("foo", "bar"));
+		IProject invisibleProject = copyAndImportFolder("singlefile/java14", "foo/bar/Foo.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+		IFolder linkFolder = invisibleProject.getFolder(ProjectUtils.WORKSPACE_LINK);
+
+		List<String> sourcePaths = new ArrayList<>();
+		for (IClasspathEntry entry : javaProject.getRawClasspath()) {
+			if (entry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
+				sourcePaths.add(entry.getPath().makeRelativeTo(linkFolder.getFullPath()).toString());
+			}
+		}
+		assertEquals(1, sourcePaths.size());
+		assertTrue(sourcePaths.contains("foo"));
+	}
+
+	@Test
+	public void testSpecifyingEmptySourcePaths() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectSourcePaths(Collections.emptyList());
+		IProject invisibleProject = copyAndImportFolder("singlefile/java14", "foo/bar/Foo.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+		IFolder linkFolder = invisibleProject.getFolder(ProjectUtils.WORKSPACE_LINK);
+
+		List<String> sourcePaths = new ArrayList<>();
+		for (IClasspathEntry entry : javaProject.getRawClasspath()) {
+			if (entry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
+				sourcePaths.add(entry.getPath().makeRelativeTo(linkFolder.getFullPath()).toString());
+			}
+		}
+		assertEquals(0, sourcePaths.size());
+	}
+
+	@Test
+	public void testSpecifyingNestedSourcePaths() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectSourcePaths(Arrays.asList("foo", "foo/bar"));
+		IProject invisibleProject = copyAndImportFolder("singlefile/java14", "foo/bar/Foo.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+		IFolder linkFolder = invisibleProject.getFolder(ProjectUtils.WORKSPACE_LINK);
+
+		List<String> sourcePaths = new ArrayList<>();
+		for (IClasspathEntry entry : javaProject.getRawClasspath()) {
+			if (entry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
+				sourcePaths.add(entry.getPath().makeRelativeTo(linkFolder.getFullPath()).toString());
+			}
+		}
+		assertEquals(2, sourcePaths.size());
+		assertTrue(sourcePaths.contains("foo"));
+		assertTrue(sourcePaths.contains("foo/bar"));
+	}
+
+	@Test
+	public void testSpecifyingDuplicatedSourcePaths() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectSourcePaths(Arrays.asList("foo", "foo"));
+		IProject invisibleProject = copyAndImportFolder("singlefile/java14", "foo/bar/Foo.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+		IFolder linkFolder = invisibleProject.getFolder(ProjectUtils.WORKSPACE_LINK);
+
+		List<String> sourcePaths = new ArrayList<>();
+		for (IClasspathEntry entry : javaProject.getRawClasspath()) {
+			if (entry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
+				sourcePaths.add(entry.getPath().makeRelativeTo(linkFolder.getFullPath()).toString());
+			}
+		}
+		assertEquals(1, sourcePaths.size());
+		assertTrue(sourcePaths.contains("foo"));
+	}
+
+	@Test
+	public void testSpecifyingRootAsSourcePaths() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectSourcePaths(Arrays.asList(""));
+		IProject invisibleProject = copyAndImportFolder("singlefile/java14", "foo/bar/Foo.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+		IFolder linkFolder = invisibleProject.getFolder(ProjectUtils.WORKSPACE_LINK);
+
+		List<String> sourcePaths = new ArrayList<>();
+		for (IClasspathEntry entry : javaProject.getRawClasspath()) {
+			if (entry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
+				sourcePaths.add(entry.getPath().makeRelativeTo(linkFolder.getFullPath()).toString());
+			}
+		}
+		assertEquals(1, sourcePaths.size());
+		assertTrue(sourcePaths.contains(""));
+	}
+
+	@Test(expected = CoreException.class)
+	public void testSpecifyingAbsoluteSourcePath() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectSourcePaths(Arrays.asList(new File("projects").getAbsolutePath()));
+		copyAndImportFolder("singlefile/simple", "src/App.java");
+		waitForBackgroundJobs();
+	}
+
+	@Test
+	public void testSpecifyingSourcePathsContainingOutputPath() throws Exception {
+		Preferences preferences = preferenceManager.getPreferences();
+		preferences.setInvisibleProjectSourcePaths(Arrays.asList(""));
+		preferences.setInvisibleProjectOutputPath("bin");
+		IProject invisibleProject = copyAndImportFolder("singlefile/java14", "foo/bar/Foo.java");
+		waitForBackgroundJobs();
+		IJavaProject javaProject = JavaCore.create(invisibleProject);
+
+		for (IClasspathEntry entry : javaProject.getRawClasspath()) {
+			if (entry.getEntryKind() == IClasspathEntry.CPE_SOURCE) {
+				assertEquals("bin/", entry.getExclusionPatterns()[0].toString());
+			}
 		}
 	}
 }

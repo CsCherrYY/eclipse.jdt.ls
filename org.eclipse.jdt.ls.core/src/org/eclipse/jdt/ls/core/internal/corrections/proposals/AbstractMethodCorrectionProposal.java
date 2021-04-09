@@ -154,7 +154,7 @@ public abstract class AbstractMethodCorrectionProposal extends ASTRewriteCorrect
 			if (!isAbstractMethod && !isVoid) {
 				ReturnStatement returnStatement= ast.newReturnStatement();
 				returnStatement.setExpression(ASTNodeFactory.newDefaultExpression(ast, returnType, 0));
-				bodyStatement= ASTNodes.asFormattedString(returnStatement, 0, String.valueOf('\n'), getCompilationUnit().getJavaProject().getOptions(true));
+				bodyStatement= ASTNodes.asFormattedString(returnStatement, 0, String.valueOf('\n'), getCompilationUnit().getOptions(true));
 			}
 		}
 
@@ -172,7 +172,7 @@ public abstract class AbstractMethodCorrectionProposal extends ASTRewriteCorrect
 		}
 		decl.setBody(body);
 
-		CodeGenerationSettings settings = PreferenceManager.getCodeGenerationSettings(getCompilationUnit().getResource());
+		CodeGenerationSettings settings = PreferenceManager.getCodeGenerationSettings(getCompilationUnit());
 		if (settings.createComments && !fSenderBinding.isAnonymous()) {
 			String string = CodeGeneration.getMethodComment(getCompilationUnit(), fSenderBinding.getName(), decl, null,
 					String.valueOf('\n'));

@@ -89,7 +89,7 @@ public class ConstructorFromSuperclassProposal extends LinkedCorrectionProposal 
 
 		createImportRewrite((CompilationUnit) fTypeNode.getRoot());
 
-		CodeGenerationSettings settings= JavaPreferencesSettings.getCodeGenerationSettings(getCompilationUnit().getJavaProject());
+		CodeGenerationSettings settings= JavaPreferencesSettings.getCodeGenerationSettings(getCompilationUnit());
 		if (!settings.createComments) {
 			settings= null;
 		}
@@ -163,7 +163,7 @@ public class ConstructorFromSuperclassProposal extends LinkedCorrectionProposal 
 			}
 		}
 
-		String bodyStatement = (invocation == null) ? "" : ASTNodes.asFormattedString(invocation, 0, String.valueOf('\n'), getCompilationUnit().getJavaProject().getOptions(true)); //$NON-NLS-1$
+		String bodyStatement = (invocation == null) ? "" : ASTNodes.asFormattedString(invocation, 0, String.valueOf('\n'), getCompilationUnit().getOptions(true)); //$NON-NLS-1$
 		String placeHolder= CodeGeneration.getMethodBodyContent(getCompilationUnit(), name, name, true, bodyStatement, String.valueOf('\n'));
 		if (placeHolder != null) {
 			ASTNode todoNode= rewrite.createStringPlaceholder(placeHolder, ASTNode.RETURN_STATEMENT);

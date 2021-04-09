@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2016-2020 Red Hat Inc. and others.
+ * Copyright (c) 2016-2021 Red Hat Inc. and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
  * which accompanies this distribution, and is available at
@@ -18,12 +18,16 @@ import static org.eclipse.jdt.ls.core.internal.handlers.MapFlattener.getList;
 import static org.eclipse.jdt.ls.core.internal.handlers.MapFlattener.getString;
 import static org.eclipse.jdt.ls.core.internal.handlers.MapFlattener.getValue;
 
+import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +40,8 @@ import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.preferences.DefaultScope;
 import org.eclipse.core.runtime.preferences.IEclipsePreferences;
 import org.eclipse.core.runtime.preferences.InstanceScope;
+import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.formatter.DefaultCodeFormatterConstants;
 import org.eclipse.jdt.core.manipulation.CodeStyleConfiguration;
 import org.eclipse.jdt.internal.core.manipulation.MembersOrderPreferenceCacheCommon;
 import org.eclipse.jdt.ls.core.internal.IConstants;
@@ -62,6 +68,20 @@ public class Preferences {
 	 * finding references.
 	 */
 	public static final String JAVA_REFERENCES_INCLUDE_ACCESSORS = "java.references.includeAccessors";
+
+	/**
+	 * Preference key used to include the decompiled sources when finding
+	 * references.
+	 */
+	public static final String JAVA_REFERENCES_INCLUDE_DECOMPILED_SOURCES = "java.references.includeDecompiledSources";
+	/**
+	 * Insert spaces when pressing Tab
+	 */
+	public static final String JAVA_CONFIGURATION_INSERTSPACES = "java.format.insertSpaces";
+	/**
+	 * Tab Size
+	 */
+	public static final String JAVA_CONFIGURATION_TABSIZE = "java.format.tabSize";
 	/**
 	 * Specifies Java Execution Environments.
 	 */
@@ -130,6 +150,11 @@ public class Preferences {
 	 */
 	public static final String MAVEN_DOWNLOAD_SOURCES = "java.maven.downloadSources";
 	/**
+	 * Preference key to enable/disable downloading source artifacts for Eclipse
+	 * projects.
+	 */
+	public static final String ECLIPSE_DOWNLOAD_SOURCES = "java.eclipse.downloadSources";
+	/**
 	 * Preference key to force update of Snapshots/Releases.
 	 */
 	public static final String MAVEN_UPDATE_SNAPSHOTS = "java.maven.updateSnapshots";
@@ -196,6 +221,16 @@ public class Preferences {
 	public static final ReferencedLibraries JAVA_PROJECT_REFERENCED_LIBRARIES_DEFAULT;
 
 	/**
+	 * Preference key to specify the output path of the invisible project
+	 */
+	public static final String JAVA_PROJECT_OUTPUT_PATH_KEY = "java.project.outputPath";
+
+	/**
+	 * Preference key to specify the source paths of the invisible project
+	 */
+	public static final String JAVA_PROJECT_SOURCE_PATHS_KEY = "java.project.sourcePaths";
+
+	/**
 	 * Preference key for project build/configuration update settings.
 	 */
 	public static final String CONFIGURATION_UPDATE_BUILD_CONFIGURATION_KEY = "java.configuration.updateBuildConfiguration";
@@ -209,6 +244,11 @@ public class Preferences {
 	 * Preference key for Maven user settings.xml location.
 	 */
 	public static final String MAVEN_USER_SETTINGS_KEY = "java.configuration.maven.userSettings";
+
+	/**
+	 * Preference key for Maven global settings.xml location.
+	 */
+	public static final String MAVEN_GLOBAL_SETTINGS_KEY = "java.configuration.maven.globalSettings";
 
 	/**
 	 * Preference key to enable/disable the 'completion'.
@@ -398,6 +438,7 @@ public class Preferences {
 	public static final String IMPLEMENTATION_ID = UUID.randomUUID().toString();
 	public static final String SELECTION_RANGE_ID = UUID.randomUUID().toString();
 	private static final String GRADLE_OFFLINE_MODE = "gradle.offline.mode";
+	private static final int DEFAULT_TAB_SIZE = 4;
 
 	private Map<String, Object> configuration;
 	private Severity incompleteClasspathSeverity;
@@ -414,6 +455,7 @@ public class Preferences {
 	private String gradleUserHome;
 	private boolean importMavenEnabled;
 	private boolean mavenDownloadSources;
+	private boolean eclipseDownloadSources;
 	private boolean mavenUpdateSnapshots;
 	private boolean implementationsCodeLensEnabled;
 	private boolean javaFormatEnabled;
@@ -440,14 +482,18 @@ public class Preferences {
 	private int generateToStringLimitElements;
 	private List<String> preferredContentProviderIds;
 	private boolean includeAccessors;
+	private boolean includeDecompiledSources;
 
 	private String mavenUserSettings;
+	private String mavenGlobalSettings;
 
 	private List<String> javaCompletionFavoriteMembers;
 	private List<?> gradleWrapperList;
 
 	private List<String> javaImportExclusions = new LinkedList<>();
 	private ReferencedLibraries referencedLibraries;
+	private String invisibleProjectOutputPath;
+	private List<String> invisibleProjectSourcePaths;
 	private String javaHome;
 	private List<String> importOrder;
 	private List<String> filteredTypes;
@@ -464,6 +510,8 @@ public class Preferences {
 
 	private List<String> fileHeaderTemplate = new LinkedList<>();
 	private List<String> typeCommentTemplate = new LinkedList<>();
+	private boolean insertSpaces;
+	private int tabSize;
 
 	static {
 		JAVA_IMPORT_EXCLUSIONS_DEFAULT = new LinkedList<>();
@@ -490,6 +538,7 @@ public class Preferences {
 		JAVA_COMPLETION_FILTERED_TYPES_DEFAULT = new ArrayList<>();
 		JAVA_COMPLETION_FILTERED_TYPES_DEFAULT.add("java.awt.*");
 		JAVA_COMPLETION_FILTERED_TYPES_DEFAULT.add("com.sun.*");
+		JAVA_COMPLETION_FILTERED_TYPES_DEFAULT.add("sun.*");
 		JAVA_RESOURCE_FILTERS_DEFAULT = Arrays.asList("node_modules", ".git");
 	}
 
@@ -599,6 +648,7 @@ public class Preferences {
 		gradleUserHome = null;
 		importMavenEnabled = true;
 		mavenDownloadSources = false;
+		eclipseDownloadSources = false;
 		mavenUpdateSnapshots = false;
 		referencesCodeLensEnabled = true;
 		implementationsCodeLensEnabled = false;
@@ -637,6 +687,9 @@ public class Preferences {
 		referencedLibraries = JAVA_PROJECT_REFERENCED_LIBRARIES_DEFAULT;
 		resourceFilters = JAVA_RESOURCE_FILTERS_DEFAULT;
 		includeAccessors = true;
+		includeDecompiledSources = true;
+		insertSpaces = true;
+		tabSize = DEFAULT_TAB_SIZE;
 	}
 
 	/**
@@ -659,6 +712,10 @@ public class Preferences {
 
 		boolean importGradleEnabled = getBoolean(configuration, IMPORT_GRADLE_ENABLED, true);
 		prefs.setImportGradleEnabled(importGradleEnabled);
+		boolean insertSpaces = getBoolean(configuration, JAVA_CONFIGURATION_INSERTSPACES, true);
+		prefs.setInsertSpaces(insertSpaces);
+		int tabSize = getInt(configuration, JAVA_CONFIGURATION_TABSIZE, DEFAULT_TAB_SIZE);
+		prefs.setTabSize(tabSize);
 		boolean importGradleOfflineEnabled = getBoolean(configuration, IMPORT_GRADLE_OFFLINE_ENABLED, false);
 		prefs.setImportGradleOfflineEnabled(importGradleOfflineEnabled);
 		boolean gradleWrapperEnabled = getBoolean(configuration, GRADLE_WRAPPER_ENABLED, true);
@@ -677,8 +734,11 @@ public class Preferences {
 		prefs.setGradleUserHome(gradleUserHome);
 		boolean importMavenEnabled = getBoolean(configuration, IMPORT_MAVEN_ENABLED, true);
 		prefs.setImportMavenEnabled(importMavenEnabled);
-		boolean downloadSources = getBoolean(configuration, MAVEN_DOWNLOAD_SOURCES, false);
-		prefs.setMavenDownloadSources(downloadSources);
+		boolean mavenDownloadSources = getBoolean(configuration, MAVEN_DOWNLOAD_SOURCES, false);
+		prefs.setMavenDownloadSources(mavenDownloadSources);
+		boolean eclipseDownloadSources = getBoolean(configuration, ECLIPSE_DOWNLOAD_SOURCES, false);
+		prefs.setEclipseDownloadSources(eclipseDownloadSources);
+
 		boolean updateSnapshots = getBoolean(configuration, MAVEN_UPDATE_SNAPSHOTS, false);
 		prefs.setMavenUpdateSnapshots(updateSnapshots);
 		boolean referenceCodelensEnabled = getBoolean(configuration, REFERENCES_CODE_LENS_ENABLED_KEY, true);
@@ -772,6 +832,12 @@ public class Preferences {
 			}
 		}
 
+		String invisibleProjectOutputPath = getString(configuration, JAVA_PROJECT_OUTPUT_PATH_KEY, "");
+		prefs.setInvisibleProjectOutputPath(invisibleProjectOutputPath);
+
+		List<String> invisibleProjectSourcePaths = getList(configuration, JAVA_PROJECT_SOURCE_PATHS_KEY, null);
+		prefs.setInvisibleProjectSourcePaths(invisibleProjectSourcePaths);
+
 		List<String> javaCompletionFavoriteMembers = getList(configuration, JAVA_COMPLETION_FAVORITE_MEMBERS_KEY, JAVA_COMPLETION_FAVORITE_MEMBERS_DEFAULT);
 		prefs.setJavaCompletionFavoriteMembers(javaCompletionFavoriteMembers);
 
@@ -780,6 +846,9 @@ public class Preferences {
 
 		String mavenUserSettings = getString(configuration, MAVEN_USER_SETTINGS_KEY, null);
 		prefs.setMavenUserSettings(mavenUserSettings);
+
+		String mavenGlobalSettings = getString(configuration, MAVEN_GLOBAL_SETTINGS_KEY, null);
+		prefs.setMavenGlobalSettings(mavenGlobalSettings);
 
 		String sortOrder = getString(configuration, MEMBER_SORT_ORDER, null);
 		prefs.setMembersSortOrder(sortOrder);
@@ -883,6 +952,8 @@ public class Preferences {
 		prefs.setTypeCommentTemplate(typeComment);
 		boolean includeAccessors = getBoolean(configuration, JAVA_REFERENCES_INCLUDE_ACCESSORS, true);
 		prefs.setIncludeAccessors(includeAccessors);
+		boolean includeDecompiledSources = getBoolean(configuration, JAVA_REFERENCES_INCLUDE_DECOMPILED_SOURCES, true);
+		prefs.setIncludeDecompiledSources(includeDecompiledSources);
 		return prefs;
 	}
 
@@ -1191,6 +1262,50 @@ public class Preferences {
 		return formatterUrl;
 	}
 
+	public URI getFormatterAsURI() {
+		return asURI(formatterUrl);
+	}
+
+	private URI asURI(String formatterUrl) {
+		if (formatterUrl == null || formatterUrl.isBlank()) {
+			return null;
+		}
+		try {
+			URI uri = new URI(ResourceUtils.toClientUri(formatterUrl));
+			if (!uri.isAbsolute()) {
+				return getURI(formatterUrl);
+			}
+			return uri;
+		} catch (URISyntaxException e1) {
+			return getURI(formatterUrl);
+		}
+	}
+
+	private URI getURI(String path) {
+		File file = findFile(path);
+		if (file != null && file.isFile()) {
+			return file.toURI();
+		}
+		return null;
+	}
+
+	private File findFile(String path) {
+		File file = new File(path);
+		if (file.exists()) {
+			return file;
+		}
+		Collection<IPath> rootPaths = getRootPaths();
+		if (rootPaths != null) {
+			for (IPath rootPath : rootPaths) {
+				File f = new File(rootPath.toOSString(), path);
+				if (f.isFile()) {
+					return f;
+				}
+			}
+		}
+		return null;
+	}
+
 	public List<String> getResourceFilters() {
 		return resourceFilters;
 	}
@@ -1328,6 +1443,15 @@ public class Preferences {
 		return mavenUserSettings;
 	}
 
+	public Preferences setMavenGlobalSettings(String mavenGlobalSettings) {
+		this.mavenGlobalSettings = ResourceUtils.expandPath(mavenGlobalSettings);
+		return this;
+	}
+
+	public String getMavenGlobalSettings() {
+		return mavenGlobalSettings;
+	}
+
 	public String[] getImportOrder() {
 		return this.importOrder == null ? new String[0] : this.importOrder.toArray(new String[importOrder.size()]);
 	}
@@ -1418,7 +1542,7 @@ public class Preferences {
 	}
 
 	public Preferences setImportOnDemandThreshold(int importOnDemandThreshold) {
-		if (importOnDemandThreshold < 0) {
+		if (importOnDemandThreshold <= 0) {
 			this.importOnDemandThreshold = IMPORTS_ONDEMANDTHRESHOLD_DEFAULT;
 		} else {
 			this.importOnDemandThreshold = importOnDemandThreshold;
@@ -1433,7 +1557,7 @@ public class Preferences {
 	}
 
 	public Preferences setStaticImportOnDemandThreshold(int staticImportOnDemandThreshold) {
-		if (staticImportOnDemandThreshold < 0) {
+		if (staticImportOnDemandThreshold <= 0) {
 			this.staticImportOnDemandThreshold = IMPORTS_STATIC_ONDEMANDTHRESHOLD_DEFAULT;
 		} else {
 			this.staticImportOnDemandThreshold = staticImportOnDemandThreshold;
@@ -1477,5 +1601,66 @@ public class Preferences {
 
 	public boolean isIncludeAccessors() {
 		return this.includeAccessors;
+	}
+	public boolean isEclipseDownloadSources() {
+		return eclipseDownloadSources;
+	}
+
+	public Preferences setEclipseDownloadSources(boolean enabled) {
+		this.eclipseDownloadSources = enabled;
+		return this;
+	}
+
+	public String getInvisibleProjectOutputPath() {
+		return invisibleProjectOutputPath;
+	}
+
+	public void setInvisibleProjectOutputPath(String invisibleProjectOutputPath) {
+		this.invisibleProjectOutputPath = invisibleProjectOutputPath;
+	}
+
+	public List<String> getInvisibleProjectSourcePaths() {
+		return invisibleProjectSourcePaths;
+	}
+
+	public void setInvisibleProjectSourcePaths(List<String> invisibleProjectSourcePaths) {
+		this.invisibleProjectSourcePaths = invisibleProjectSourcePaths;
+	}
+
+	public Preferences setIncludeDecompiledSources(boolean includeDecompiledSources) {
+		this.includeDecompiledSources = includeDecompiledSources;
+		return this;
+	}
+
+	public boolean isIncludeDecompiledSources() {
+		return this.includeDecompiledSources;
+	}
+
+	public Preferences setInsertSpaces(boolean insertSpaces) {
+		this.insertSpaces = insertSpaces;
+		return this;
+	}
+
+	public Preferences setTabSize(int tabSize) {
+		this.tabSize = tabSize;
+		return this;
+	}
+
+	public boolean isInsertSpaces() {
+		return insertSpaces;
+	}
+
+	public int getTabSize() {
+		return tabSize;
+	}
+
+	public void updateTabSizeInsertSpaces(Hashtable<String, String> options) {
+		if (options == null) {
+			return;
+		}
+		if (tabSize > 0) {
+			options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_SIZE, String.valueOf(tabSize));
+		}
+		options.put(DefaultCodeFormatterConstants.FORMATTER_TAB_CHAR, insertSpaces ? JavaCore.SPACE : JavaCore.TAB);
 	}
 }

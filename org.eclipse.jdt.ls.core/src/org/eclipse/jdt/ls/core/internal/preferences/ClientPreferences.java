@@ -14,7 +14,9 @@ package org.eclipse.jdt.ls.core.internal.preferences;
 
 import static org.apache.commons.lang3.BooleanUtils.isTrue;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.lsp4j.ClientCapabilities;
@@ -117,6 +119,10 @@ public class ClientPreferences {
 		return v3supported && capabilities.getWorkspace() != null && isDynamicRegistrationSupported(capabilities.getWorkspace().getDidChangeWatchedFiles());
 	}
 
+	public boolean isWorkspaceConfigurationSupported() {
+		return v3supported && capabilities.getWorkspace() != null && isTrue(capabilities.getWorkspace().getConfiguration());
+	}
+
 	public boolean isDocumentSymbolDynamicRegistered() {
 		return v3supported && isDynamicRegistrationSupported(capabilities.getTextDocument().getDocumentSymbol());
 	}
@@ -209,6 +215,30 @@ public class ClientPreferences {
 		return Boolean.parseBoolean(extendedClientCapabilities.getOrDefault("advancedExtractRefactoringSupport", "false").toString());
 	}
 
+	public boolean isExtractMethodInferSelectionSupported() {
+		Object supportList = extendedClientCapabilities.getOrDefault("inferSelectionSupport", new ArrayList<>());
+		if (supportList instanceof List<?>) {
+			return ((List<?>)supportList).contains("extractMethod");
+		}
+		return false;
+	}
+
+	public boolean isExtractVariableInferSelectionSupported() {
+		Object supportList = extendedClientCapabilities.getOrDefault("inferSelectionSupport", new ArrayList<>());
+		if (supportList instanceof List<?>) {
+			return ((List<?>)supportList).contains("extractVariable");
+		}
+		return false;
+	}
+
+	public boolean isExtractFieldInferSelectionSupported() {
+		Object supportList = extendedClientCapabilities.getOrDefault("inferSelectionSupport", new ArrayList<>());
+		if (supportList instanceof List<?>) {
+			return ((List<?>)supportList).contains("extractField");
+		}
+		return false;
+	}
+
 	public boolean isAdvancedIntroduceParameterRefactoringSupported() {
 		return Boolean.parseBoolean(extendedClientCapabilities.getOrDefault("advancedIntroduceParameterRefactoringSupport", "false").toString());
 	}
@@ -277,14 +307,6 @@ public class ClientPreferences {
 				&& capabilities.getTextDocument().getDocumentSymbol() != null
 				&& capabilities.getTextDocument().getDocumentSymbol().getHierarchicalDocumentSymbolSupport() != null
 				&& capabilities.getTextDocument().getDocumentSymbol().getHierarchicalDocumentSymbolSupport().booleanValue();
-		//@formatter:on
-	}
-
-	public boolean isSemanticHighlightingSupported() {
-		//@formatter:off
-		return v3supported && capabilities.getTextDocument().getSemanticHighlightingCapabilities() != null
-				&& capabilities.getTextDocument().getSemanticHighlightingCapabilities().getSemanticHighlighting() != null
-				&& capabilities.getTextDocument().getSemanticHighlightingCapabilities().getSemanticHighlighting().booleanValue();
 		//@formatter:on
 	}
 

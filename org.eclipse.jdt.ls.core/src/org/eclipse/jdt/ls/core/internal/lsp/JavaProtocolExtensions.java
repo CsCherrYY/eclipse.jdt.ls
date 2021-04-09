@@ -17,7 +17,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.jdt.ls.core.internal.BuildWorkspaceStatus;
 import org.eclipse.jdt.ls.core.internal.codemanipulation.GenerateGetterSetterOperation.AccessorField;
-import org.eclipse.jdt.ls.core.internal.handlers.FileEventHandler.FileRenameParams;
 import org.eclipse.jdt.ls.core.internal.handlers.FindLinksHandler.FindLinksParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateAccessorsHandler.GenerateAccessorsParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateConstructorsHandler.CheckConstructorsResponse;
@@ -26,6 +25,8 @@ import org.eclipse.jdt.ls.core.internal.handlers.GenerateDelegateMethodsHandler.
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateDelegateMethodsHandler.GenerateDelegateMethodsParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateToStringHandler.CheckToStringResponse;
 import org.eclipse.jdt.ls.core.internal.handlers.GenerateToStringHandler.GenerateToStringParams;
+import org.eclipse.jdt.ls.core.internal.handlers.InferSelectionHandler.InferSelectionParams;
+import org.eclipse.jdt.ls.core.internal.handlers.InferSelectionHandler.SelectionInfo;
 import org.eclipse.jdt.ls.core.internal.handlers.GetRefactorEditHandler.GetRefactorEditParams;
 import org.eclipse.jdt.ls.core.internal.handlers.GetRefactorEditHandler.RefactorWorkspaceEdit;
 import org.eclipse.jdt.ls.core.internal.handlers.HashCodeEqualsHandler.CheckHashCodeEqualsResponse;
@@ -109,6 +110,9 @@ public interface JavaProtocolExtensions {
 	CompletableFuture<RefactorWorkspaceEdit> getRefactorEdit(GetRefactorEditParams params);
 
 	@JsonRequest
+	CompletableFuture<List<SelectionInfo>> inferSelection(InferSelectionParams params);
+
+	@JsonRequest
 	CompletableFuture<MoveDestinationsResponse> getMoveDestinations(MoveParams params);
 
 	@JsonRequest
@@ -119,10 +123,4 @@ public interface JavaProtocolExtensions {
 
 	@JsonRequest
 	CompletableFuture<List<? extends Location>> findLinks(FindLinksParams params);
-
-	@JsonRequest
-	CompletableFuture<WorkspaceEdit> didRenameFiles(FileRenameParams params);
-
-	@JsonRequest
-	CompletableFuture<WorkspaceEdit> willRenameFiles(FileRenameParams params);
 }

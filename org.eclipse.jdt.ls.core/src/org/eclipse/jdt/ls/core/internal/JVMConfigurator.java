@@ -56,6 +56,8 @@ import org.eclipse.lsp4j.MessageType;
  */
 public class JVMConfigurator implements IVMInstallChangedListener {
 
+	public static final String MAC_OSX_VM_TYPE = "org.eclipse.jdt.internal.launching.macosx.MacOSXType"; //$NON-NLS-1$
+
 	public static boolean configureDefaultVM(String javaHome) throws CoreException {
 		if (StringUtils.isBlank(javaHome)) {
 			return false;
@@ -74,6 +76,13 @@ public class JVMConfigurator implements IVMInstallChangedListener {
 		IVMInstall vm = findVM(jvmHome, null);
 		if (vm == null) {
 			IVMInstallType installType = JavaRuntime.getVMInstallType(StandardVMType.ID_STANDARD_VM_TYPE);
+			if (installType == null || installType.getVMInstalls().length == 0) {
+				// https://github.com/eclipse/eclipse.jdt.ls/issues/1646
+				IVMInstallType macInstallType = JavaRuntime.getVMInstallType(MAC_OSX_VM_TYPE);
+				if (macInstallType != null) {
+					installType = macInstallType;
+				}
+			}
 			long unique = System.currentTimeMillis();
 			while (installType.findVMInstall(String.valueOf(unique)) != null) {
 				unique++;
@@ -108,6 +117,13 @@ public class JVMConfigurator implements IVMInstallChangedListener {
 					IPath sourcePath = runtime.getSourcePath();
 					IVMInstall vm = findVM(file, runtime.getName());
 					IVMInstallType installType = JavaRuntime.getVMInstallType(StandardVMType.ID_STANDARD_VM_TYPE);
+					if (installType == null || installType.getVMInstalls().length == 0) {
+						// https://github.com/eclipse/eclipse.jdt.ls/issues/1646
+						IVMInstallType macInstallType = JavaRuntime.getVMInstallType(MAC_OSX_VM_TYPE);
+						if (macInstallType != null) {
+							installType = macInstallType;
+						}
+					}
 					VMStandin vmStandin;
 					if (vm == null) {
 						long unique = System.currentTimeMillis();
@@ -133,7 +149,7 @@ public class JVMConfigurator implements IVMInstallChangedListener {
 						continue;
 					}
 
-					
+
 					vmStandin.setName(runtime.getName());
 					vmStandin.setInstallLocation(file);
 
@@ -209,7 +225,7 @@ public class JVMConfigurator implements IVMInstallChangedListener {
 			connection.sendActionableNotification(runtimeNotification);
 			return;
 		}
-		
+
 		connection.showNotificationMessage(MessageType.Error, message);
 	}
 
@@ -323,7 +339,7 @@ public class JVMConfigurator implements IVMInstallChangedListener {
 			Map<String, String> options = javaProject.getOptions(false);
 			JavaCore.setComplianceOptions(compliance, options);
 		}
-		if (JavaCore.compareJavaVersions(version, JavaCore.latestSupportedJavaVersion()) >= 0) {
+		if (JavaCore.isSupportedJavaVersion(version) && JavaCore.compareJavaVersions(version, JavaCore.latestSupportedJavaVersion()) >= 0) {
 			//Enable Java preview features for the latest JDK release by default and stfu about it
 			javaProject.setOption(JavaCore.COMPILER_PB_ENABLE_PREVIEW_FEATURES, JavaCore.ENABLED);
 			javaProject.setOption(JavaCore.COMPILER_PB_REPORT_PREVIEW_FEATURES, JavaCore.IGNORE);
