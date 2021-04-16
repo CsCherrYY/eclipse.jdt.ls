@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.eclipse.jdt.ls.core.internal;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -22,6 +23,8 @@ import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -46,6 +49,9 @@ import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.ls.core.internal.managers.BuildSupportManager;
+import org.eclipse.jdt.ls.core.internal.managers.IBuildSupport;
+import org.eclipse.jdt.ls.core.internal.managers.InternalBuildSupports;
 import org.eclipse.jdt.ls.core.internal.managers.ProjectsManager;
 import org.eclipse.jdt.ls.core.internal.preferences.PreferenceManager;
 import org.eclipse.m2e.core.internal.IMavenConstants;
@@ -55,6 +61,8 @@ import org.eclipse.m2e.core.internal.IMavenConstants;
  */
 @SuppressWarnings("restriction")
 public final class ProjectUtils {
+
+	public static final String SETTINGS = ".settings";
 
 	public static final String WORKSPACE_LINK = "_";
 
@@ -87,7 +95,12 @@ public final class ProjectUtils {
 	}
 
 	public static boolean isGeneralJavaProject(IProject project) {
-		return isJavaProject(project) && !isMavenProject(project) && !isGradleProject(project);
+		return isJavaProject(project) && isInternalBuildSupport(BuildSupportManager.find(project).orElse(null));
+	}
+
+	public static boolean isInternalBuildSupport(IBuildSupport buildSupport) {
+		return buildSupport != null && Arrays.stream(InternalBuildSupports.values())
+				.anyMatch(bsn -> Objects.equals(buildSupport.buildToolName(), bsn.toString()));
 	}
 
 	public static String getJavaSourceLevel(IProject project) {
@@ -311,6 +324,13 @@ public final class ProjectUtils {
 				try {
 					JDTUtils.createFolders(workspaceLinkFolder.getParent(), null);
 					workspaceLinkFolder.createLink(workspaceRoot.toFile().toURI(), IResource.REPLACE, null);
+					File settings = new File(workspaceRoot.toFile(), SETTINGS);
+					if (settings.exists()) {
+						IFolder settingsLinkFolder = invisibleProject.getFolder(SETTINGS);
+						settingsLinkFolder.createLink(settings.toURI(), IResource.REPLACE, null);
+						IJavaProject javaProject = JavaCore.create(invisibleProject);
+						JVMConfigurator.configureJVMSettings(javaProject);
+					}
 				} catch (CoreException e) {
 					invisibleProject.delete(true, null);
 					throw new CoreException(new Status(IStatus.ERROR, IConstants.PLUGIN_ID,
@@ -356,6 +376,8 @@ public final class ProjectUtils {
 		}
 		IClasspathEntry[] rawClasspath = javaProject.getRawClasspath();
 		List<IClasspathEntry> newEntries = Arrays.stream(rawClasspath).filter(cpe -> cpe.getEntryKind() != IClasspathEntry.CPE_LIBRARY).collect(Collectors.toCollection(ArrayList::new));
+		List<IClasspathEntry> libEntries = Arrays.stream(rawClasspath).filter(cpe -> cpe.getEntryKind() == IClasspathEntry.CPE_LIBRARY && cpe.getSourceAttachmentPath() != null && cpe.getSourceAttachmentPath().toFile().exists())
+				.collect(Collectors.toCollection(ArrayList::new));
 
 		for (Map.Entry<Path, IPath> library : libraries.entrySet()) {
 			if (monitor.isCanceled()) {
@@ -363,6 +385,10 @@ public final class ProjectUtils {
 			}
 			IPath binary = new org.eclipse.core.runtime.Path(library.getKey().toString());
 			IPath source = library.getValue();
+			if (source == null && !libEntries.isEmpty()) {
+				Optional<IClasspathEntry> result = libEntries.stream().filter(cpe -> cpe.getPath().equals(binary)).findAny();
+				source = result.isPresent() ? result.get().getSourceAttachmentPath() : null;
+			}
 			IClasspathEntry newEntry = JavaCore.newLibraryEntry(binary, source, null);
 			JavaLanguageServerPlugin.logInfo(">> Adding " + binary + " to the classpath");
 			newEntries.add(newEntry);
