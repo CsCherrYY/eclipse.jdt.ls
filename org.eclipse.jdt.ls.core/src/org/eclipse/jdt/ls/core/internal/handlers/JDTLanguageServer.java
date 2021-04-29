@@ -370,6 +370,7 @@ public class JDTLanguageServer extends BaseJDTLanguageServer implements Language
 			}
 		}
 		CodeActionOptions options = new CodeActionOptions(codeActionKinds);
+		options.setResolveProvider(Boolean.valueOf(preferenceManager.getClientPreferences().isResolveCodeActionSupported()));
 		return options;
 	}
 
@@ -470,8 +471,8 @@ public class JDTLanguageServer extends BaseJDTLanguageServer implements Language
 		} catch (CoreException e) {
 			JavaLanguageServerPlugin.logException(e.getMessage(), e);
 		}
-		StandardProjectsManager.configureSettings(preferenceManager.getPreferences());
 		FormatterManager.configureFormatter(preferenceManager.getPreferences());
+		StandardProjectsManager.configureSettings(preferenceManager.getPreferences());
 		logInfo(">> New configuration: " + settings);
 	}
 
@@ -646,6 +647,23 @@ public class JDTLanguageServer extends BaseJDTLanguageServer implements Language
 		return computeAsync((monitor) -> {
 			waitForLifecycleJobs(monitor);
 			return handler.getCodeActionCommands(params, monitor);
+		});
+	}
+
+	/* (non-Javadoc)
+	 * @see org.eclipse.lsp4j.services.TextDocumentService#resolveCodeAction(org.eclipse.lsp4j.CodeAction)
+	 */
+	@Override
+	public CompletableFuture<CodeAction> resolveCodeAction(CodeAction params) {
+		logInfo(">> codeAction/resolve");
+		// if no data property is specified, no further resolution the server can provide, so return the original result back.
+		if (params.getData() == null) {
+			return CompletableFuture.completedFuture(params);
+		}
+
+		CodeActionResolveHandler handler = new CodeActionResolveHandler();
+		return computeAsync((monitor) -> {
+			return handler.resolve(params, monitor);
 		});
 	}
 
