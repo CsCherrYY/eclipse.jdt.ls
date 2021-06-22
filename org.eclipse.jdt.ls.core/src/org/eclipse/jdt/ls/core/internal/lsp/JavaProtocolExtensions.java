@@ -129,12 +129,12 @@ public interface JavaProtocolExtensions {
 	@JsonRequest
 	CompletableFuture<List<? extends Location>> findLinks(FindLinksParams params);
 
-	@JsonRequest
+	@JsonRequest(useSegment = false, value = "textDocument/prepareTypeHierarchy")
 	CompletableFuture<List<TypeHierarchyItem>> prepareTypeHierarchy(TypeHierarchyPrepareParams params);
 	
-	@JsonRequest
+	@JsonRequest(useSegment = false, value = "typeHierarchy/supertypes")
 	CompletableFuture<List<TypeHierarchyItem>> supertypes(TypeHierarchySupertypesParams params);
 
-	@JsonRequest
+	@JsonRequest(useSegment = false, value = "typeHierarchy/subtypes")
 	CompletableFuture<List<TypeHierarchyItem>> subtypes(TypeHierarchySubtypesParams params);
 }
